@@ -38,7 +38,6 @@
             min-height: 100vh;
             padding-bottom: 90px;
         }
-        /* Animated Background */
         .bg-animation {
             position: fixed;
             top: 0;
@@ -63,7 +62,6 @@
             33% { transform: translate(50px, 50px) rotate(120deg); }
             66% { transform: translate(-50px, 100px) rotate(240deg); }
         }
-        /* Header with Admin Button */
         .header {
             padding: 20px 20px 10px;
             display: flex;
@@ -104,13 +102,11 @@
             box-shadow: 0 0 20px var(--neon-cyan-glow);
             transform: translateY(-2px);
         }
-        /* Dashboard Container */
         .dashboard {
             padding: 20px;
             max-width: 600px;
             margin: 0 auto;
         }
-        /* 3D Profile Card */
         .profile-card {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -195,7 +191,6 @@
             color: var(--neon-cyan);
             font-size: 16px;
         }
-        /* Balance Display */
         .balance-section {
             background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(147, 51, 234, 0.1));
             border-radius: 18px;
@@ -230,7 +225,6 @@
             font-size: 16px;
             color: var(--text-secondary);
         }
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -268,7 +262,6 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        /* Quick Actions */
         .quick-actions {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -322,7 +315,6 @@
             position: relative;
             z-index: 2;
         }
-        /* Bottom Navigation - 3D Glassmorphism */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -404,7 +396,6 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        /* Loading Animation */
         .loading {
             display: flex;
             justify-content: center;
@@ -428,7 +419,6 @@
             color: var(--text-secondary);
             font-size: 14px;
         }
-        /* Responsive */
         @media (max-width: 380px) {
             .balance-amount { font-size: 36px; }
             .nav-btn { padding: 10px 5px; margin: 0 3px; }
@@ -450,7 +440,7 @@
     <div class="dashboard">
         <div id="loadingScreen" class="loading">
             <div class="spinner"></div>
-            <p class="loading-text">Loading your dashboard...</p>
+            <p class="loading-text">Initializing...</p>
         </div>
         
         <div id="mainContent" style="display: none;">
@@ -464,7 +454,7 @@
                         <div class="profile-username">
                             <i class="fab fa-telegram"></i>
                             <span id="userUsername">@user</span>
-                            <i class="fas fa-circle-check verified-badge"></i>
+                            <i class="fas fa-circle-check verified-badge" id="verifiedBadge" style="display: none;"></i>
                         </div>
                     </div>
                 </div>
@@ -531,14 +521,10 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
         
         const tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.ready();
-        
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        /**
-         * Updates loading screen text
-         */
+        let currentUser = null;
+
         function updateLoadingText(text) {
             const loadingText = document.querySelector('.loading-text');
             if (loadingText) {
@@ -546,251 +532,149 @@
             }
         }
 
-        /**
-         * Gets the user data from the Telegram Web App SDK.
-         */
-        function getTelegramUser() {
-            const user = tg.initDataUnsafe.user;
-            
-            return {
-                telegram_id: user.id.toString(),
-                username: user.username || null,
-                first_name: user.first_name || 'User',
-                last_name: user.last_name || null,
-                photo_url: user.photo_url || null
-            };
-        }
-
-        /**
-         * STEP 1: Check if user exists in database
-         */
-        async function checkUserExists(telegram_id) {
+        async function initApp() {
             try {
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('telegram_id', telegram_id)
-                    .maybeSingle();
+                tg.ready();
+                tg.expand();
+                tg.setHeaderColor('#0a0a0f');
+                tg.setBackgroundColor('#0a0a0f');
 
-                if (error) {
-                    console.error('Error checking user:', error);
-                    throw error;
-                }
+                const user = tg.initDataUnsafe?.user;
+                const startParam = tg.initDataUnsafe?.start_param;
 
-                return data; // null if user doesn't exist, user object if exists
-            } catch (error) {
-                console.error('Error in checkUserExists:', error);
-                throw error;
-            }
-        }
-
-        /**
-         * STEP 2: Create new user account
-         */
-        async function createUserAccount(telegramUser) {
-            try {
-                updateLoadingText('Creating your account...');
-                
-                const newUserData = {
-                    telegram_id: telegramUser.telegram_id,
-                    username: telegramUser.username,
-                    first_name: telegramUser.first_name,
-                    last_name: telegramUser.last_name,
-                    photo_url: telegramUser.photo_url,
-                    balance: 0,
-                    total_earned: 0,
-                    total_withdrawn: 0,
-                    referral_count: 0,
-                    role: 'user',
-                    created_at: new Date().toISOString(),
-                    last_active: new Date().toISOString()
-                };
-
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .insert([newUserData])
-                    .select()
-                    .single();
-
-                if (error) {
-                    console.error('Error creating user:', error);
-                    throw error;
-                }
-
-                console.log('User account created successfully:', data);
-                return data;
-            } catch (error) {
-                console.error('Error in createUserAccount:', error);
-                throw error;
-            }
-        }
-
-        /**
-         * STEP 3: Extract and return user information from database
-         */
-        async function extractUserInformation(telegram_id) {
-            try {
-                updateLoadingText('Extracting user information...');
-                
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('telegram_id', telegram_id)
-                    .single();
-
-                if (error) {
-                    console.error('Error extracting user info:', error);
-                    throw error;
-                }
-
-                console.log('User information extracted:', data);
-                return data;
-            } catch (error) {
-                console.error('Error in extractUserInformation:', error);
-                throw error;
-            }
-        }
-
-        /**
-         * STEP 4: Initialize user (update last_active)
-         */
-        async function initializeUserSession(telegram_id) {
-            try {
-                updateLoadingText('Initializing session...');
-                
-                const { error } = await supabaseClient
-                    .from('users')
-                    .update({ last_active: new Date().toISOString() })
-                    .eq('telegram_id', telegram_id);
-
-                if (error) {
-                    console.error('Error initializing session:', error);
-                    throw error;
-                }
-
-                console.log('Session initialized successfully');
-            } catch (error) {
-                console.error('Error in initializeUserSession:', error);
-                throw error;
-            }
-        }
-
-        /**
-         * STEP 5: Load and display dashboard
-         */
-        async function loadDashboard(userData) {
-            try {
-                updateLoadingText('Loading dashboard...');
-                
-                // Display user data
-                const userName = userData.first_name + (userData.last_name ? ' ' + userData.last_name : '');
-                
-                document.getElementById('userName').textContent = userName;
-                document.getElementById('userUsername').textContent = '@' + (userData.username || 'user');
-                
-                const avatarEl = document.getElementById('userAvatar');
-                if (userData.photo_url) {
-                    avatarEl.innerHTML = `<img src="${userData.photo_url}" alt="Profile">`;
-                } else {
-                    avatarEl.innerHTML = userName.charAt(0).toUpperCase();
-                }
-                
-                document.getElementById('userBalance').textContent = 
-                    parseFloat(userData.balance || 0).toFixed(2);
-                document.getElementById('totalEarned').textContent = 
-                    parseFloat(userData.total_earned || 0).toFixed(2);
-                document.getElementById('totalWithdrawn').textContent = 
-                    parseFloat(userData.total_withdrawn || 0).toFixed(2);
-                document.getElementById('referralCount').textContent = 
-                    userData.referral_count || 0;
-                
-                // Show admin button if user is admin
-                if (userData.role === 'admin') {
-                    document.getElementById('adminBtn').classList.add('show');
-                }
-
-                // Hide loading, show dashboard
-                document.getElementById('loadingScreen').style.display = 'none';
-                document.getElementById('mainContent').style.display = 'block';
-                
-                console.log('Dashboard loaded successfully');
-            } catch (error) {
-                console.error('Error in loadDashboard:', error);
-                throw error;
-            }
-        }
-
-        /**
-         * Main initialization function with proper flow
-         */
-        async function initializeApp() {
-            try {
-                // Validate Telegram environment
-                if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
-                    showError('This application must be opened inside the Telegram app.');
+                if (!user) {
+                    document.getElementById('loadingScreen').innerHTML = '<p style="color: #ff6464;">Please open this app from Telegram.</p>';
                     return;
                 }
 
                 updateLoadingText('Checking user...');
-                
-                // Get Telegram user data
-                const telegramUser = getTelegramUser();
-                console.log('Telegram user data:', telegramUser);
 
-                // STEP 1: Check if user exists
-                let userData = await checkUserExists(telegramUser.telegram_id);
+                const { data: existingUser, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('telegram_id', user.id)
+                    .single();
 
-                // STEP 2: If user doesn't exist, create account
-                if (!userData) {
-                    console.log('User not found, creating new account...');
-                    userData = await createUserAccount(telegramUser);
+                if (existingUser) {
+                    currentUser = existingUser;
+                    localStorage.setItem('userData', JSON.stringify(existingUser));
+                    await updateLastActive(user.id);
                 } else {
-                    console.log('User found in database');
+                    updateLoadingText('Creating your account...');
+                    
+                    const newUser = {
+                        telegram_id: user.id,
+                        username: user.username || '',
+                        first_name: user.first_name || '',
+                        last_name: user.last_name || '',
+                        photo_url: user.photo_url || '',
+                        balance: 0,
+                        total_earned: 0,
+                        total_withdrawn: 0,
+                        referral_count: 0,
+                        role: 'user',
+                        verified: false,
+                        banned: false,
+                        referrer_id: startParam ? parseInt(startParam) : null
+                    };
+
+                    const { data: createdUser, error: createError } = await supabaseClient
+                        .from('users')
+                        .insert([newUser])
+                        .select()
+                        .single();
+
+                    if (createError) {
+                        console.error('Error creating user:', createError);
+                        document.getElementById('loadingScreen').innerHTML = `<p style="color: #ff6464;">Error creating your account: ${createError.message}</p>`;
+                        return;
+                    }
+
+                    if (createdUser) {
+                        currentUser = createdUser;
+                        localStorage.setItem('userData', JSON.stringify(createdUser));
+
+                        const { data: finalUser } = await supabaseClient
+                            .from('users')
+                            .select('*')
+                            .eq('telegram_id', user.id)
+                            .single();
+                        currentUser = finalUser || createdUser;
+                    } else {
+                        document.getElementById('loadingScreen').innerHTML = `<p style="color: #ff6464;">Failed to create user account. Please restart the app.</p>`;
+                        return;
+                    }
                 }
 
-                // STEP 3: Extract user information (refresh from DB to ensure latest data)
-                userData = await extractUserInformation(telegramUser.telegram_id);
+                if (currentUser.banned) {
+                    document.getElementById('loadingScreen').innerHTML = '<p style="color: #ff6464;"><i class="fas fa-ban"></i><br><br>Your account has been banned</p>';
+                    return;
+                }
 
-                // STEP 4: Initialize user session
-                await initializeUserSession(telegramUser.telegram_id);
+                await loadUserData();
 
-                // STEP 5: Load dashboard
-                await loadDashboard(userData);
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
 
             } catch (error) {
-                console.error('Error in initializeApp:', error);
-                showError('Failed to load dashboard. Please try refreshing the page.');
+                console.error('Error during app initialization:', error);
+                document.getElementById('loadingScreen').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('loadingScreen').innerHTML = `
+                    <p style="color: #ff6464;">
+                        <i class="fas fa-exclamation-triangle"></i><br><br>
+                        An error occurred.<br>
+                        Please try restarting the app.
+                    </p>
+                    <p style="font-size: 10px; opacity: 0.5; margin-top: 10px;">
+                        Error: ${error.message}
+                    </p>
+                `;
             }
         }
 
-        /**
-         * Displays an error message on the screen.
-         */
-        function showError(message) {
-            const loadingScreen = document.getElementById('loadingScreen');
-            loadingScreen.innerHTML = `
-                <div style="text-align: center; max-width: 350px; padding: 20px;">
-                    <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
-                    <h2 style="color: var(--neon-cyan); margin-bottom: 15px; font-size: 22px;">
-                        Oops! Something went wrong
-                    </h2>
-                    <p style="color: var(--text-secondary); font-size: 15px; line-height: 1.6;">
-                        ${message}
-                    </p>
-                </div>
-            `;
-            loadingScreen.style.display = 'flex';
-            document.getElementById('mainContent').style.display = 'none';
+        async function loadUserData() {
+            if (!currentUser) return;
+
+            updateLoadingText('Loading dashboard...');
+
+            if (currentUser.role === 'admin') {
+                document.getElementById('adminBtn').classList.add('show');
+            }
+
+            const userName = currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
+
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('userUsername').textContent = currentUser.username ? '@' + currentUser.username : '';
+            document.getElementById('userBalance').textContent = parseFloat(currentUser.balance || 0).toFixed(2);
+            document.getElementById('totalEarned').textContent = parseFloat(currentUser.total_earned || 0).toFixed(2);
+            document.getElementById('totalWithdrawn').textContent = parseFloat(currentUser.total_withdrawn || 0).toFixed(2);
+            document.getElementById('referralCount').textContent = currentUser.referral_count || 0;
+
+            const avatarEl = document.getElementById('userAvatar');
+            if (currentUser.photo_url) {
+                avatarEl.innerHTML = `<img src="${currentUser.photo_url}" alt="Profile">`;
+            } else {
+                avatarEl.innerHTML = userName.charAt(0).toUpperCase();
+            }
+
+            if (currentUser.verified) {
+                document.getElementById('verifiedBadge').style.display = 'inline-block';
+            }
         }
 
-        /**
-         * Entry point when page loads
-         */
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log('App starting...');
-            initializeApp();
-        });
+        async function updateLastActive(userId) {
+            try {
+                await supabaseClient
+                    .from('users')
+                    .update({ last_active: new Date().toISOString() })
+                    .eq('telegram_id', userId);
+            } catch (error) {
+                console.error('Error updating last active:', error);
+            }
+        }
 
+        initApp();
     </script>
 </body>
 </html>
