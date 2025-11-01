@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>StreamPerks - Earn & Grow</title>
     
-    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- Font Awesome -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
@@ -21,7 +20,6 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-
         :root {
             --bg-dark: #0a0a0f;
             --glass-bg: rgba(255, 255, 255, 0.05);
@@ -32,7 +30,6 @@
             --text-secondary: #b4b4b4;
             --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
-
         body {
             font-family: 'Poppins', sans-serif;
             background: var(--bg-dark);
@@ -41,7 +38,6 @@
             min-height: 100vh;
             padding-bottom: 90px;
         }
-
         /* Animated Background */
         .bg-animation {
             position: fixed;
@@ -52,7 +48,6 @@
             z-index: -1;
             overflow: hidden;
         }
-
         .bg-animation::before {
             content: '';
             position: absolute;
@@ -63,13 +58,11 @@
                         radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
             animation: bgFloat 20s ease-in-out infinite;
         }
-
         @keyframes bgFloat {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
             33% { transform: translate(50px, 50px) rotate(120deg); }
             66% { transform: translate(-50px, 100px) rotate(240deg); }
         }
-
         /* Header with Admin Button */
         .header {
             padding: 20px 20px 10px;
@@ -79,7 +72,6 @@
             position: relative;
             z-index: 10;
         }
-
         .logo {
             font-size: 28px;
             font-weight: 800;
@@ -90,7 +82,6 @@
             text-shadow: 0 0 30px var(--neon-cyan-glow);
             letter-spacing: 1px;
         }
-
         .admin-btn {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -105,24 +96,20 @@
             display: none;
             text-decoration: none;
         }
-
         .admin-btn.show {
             display: block;
         }
-
         .admin-btn:hover {
             background: rgba(0, 242, 255, 0.1);
             box-shadow: 0 0 20px var(--neon-cyan-glow);
             transform: translateY(-2px);
         }
-
         /* Dashboard Container */
         .dashboard {
             padding: 20px;
             max-width: 600px;
             margin: 0 auto;
         }
-
         /* 3D Profile Card */
         .profile-card {
             background: var(--glass-bg);
@@ -137,7 +124,6 @@
             position: relative;
             overflow: hidden;
         }
-
         .profile-card::before {
             content: '';
             position: absolute;
@@ -149,16 +135,13 @@
             transform: rotate(45deg);
             transition: all 0.6s ease;
         }
-
         .profile-card:hover::before {
             left: 100%;
         }
-
         .profile-card:hover {
             transform: translateY(-5px) rotateX(2deg);
             box-shadow: 0 15px 50px rgba(0, 242, 255, 0.3);
         }
-
         .profile-header {
             display: flex;
             align-items: center;
@@ -167,7 +150,6 @@
             position: relative;
             z-index: 2;
         }
-
         .profile-avatar {
             width: 80px;
             height: 80px;
@@ -183,30 +165,25 @@
             overflow: hidden;
             animation: avatarPulse 3s ease-in-out infinite;
         }
-
         @keyframes avatarPulse {
             0%, 100% { box-shadow: 0 8px 25px var(--neon-cyan-glow); }
             50% { box-shadow: 0 8px 35px rgba(0, 242, 255, 0.8); }
         }
-
         .profile-avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             border-radius: 20px;
         }
-
         .profile-info {
             flex: 1;
         }
-
         .profile-name {
             font-size: 22px;
             font-weight: 700;
             margin-bottom: 5px;
             color: var(--text-primary);
         }
-
         .profile-username {
             font-size: 14px;
             color: var(--text-secondary);
@@ -214,12 +191,10 @@
             align-items: center;
             gap: 5px;
         }
-
         .verified-badge {
             color: var(--neon-cyan);
             font-size: 16px;
         }
-
         /* Balance Display */
         .balance-section {
             background: linear-gradient(135deg, rgba(0, 242, 255, 0.1), rgba(147, 51, 234, 0.1));
@@ -230,7 +205,6 @@
             z-index: 2;
             border: 1px solid rgba(0, 242, 255, 0.2);
         }
-
         .balance-label {
             font-size: 13px;
             color: var(--text-secondary);
@@ -238,7 +212,6 @@
             letter-spacing: 1px;
             margin-bottom: 8px;
         }
-
         .balance-amount {
             font-size: 42px;
             font-weight: 800;
@@ -249,17 +222,14 @@
             margin-bottom: 8px;
             animation: balanceGlow 2s ease-in-out infinite;
         }
-
         @keyframes balanceGlow {
             0%, 100% { filter: drop-shadow(0 0 10px var(--neon-cyan-glow)); }
             50% { filter: drop-shadow(0 0 20px var(--neon-cyan-glow)); }
         }
-
         .balance-currency {
             font-size: 16px;
             color: var(--text-secondary);
         }
-
         /* Stats Grid */
         .stats-grid {
             display: grid;
@@ -267,7 +237,6 @@
             gap: 15px;
             margin-bottom: 25px;
         }
-
         .stat-card {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -278,32 +247,27 @@
             transition: all 0.3s ease;
             cursor: pointer;
         }
-
         .stat-card:hover {
             transform: translateY(-5px);
             border-color: var(--neon-cyan);
             box-shadow: 0 10px 30px var(--neon-cyan-glow);
         }
-
         .stat-icon {
             font-size: 24px;
             margin-bottom: 8px;
         }
-
         .stat-value {
             font-size: 20px;
             font-weight: 700;
             color: var(--neon-cyan);
             margin-bottom: 4px;
         }
-
         .stat-label {
             font-size: 11px;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-
         /* Quick Actions */
         .quick-actions {
             display: grid;
@@ -311,7 +275,6 @@
             gap: 15px;
             margin-bottom: 25px;
         }
-
         .action-btn {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -326,7 +289,6 @@
             position: relative;
             overflow: hidden;
         }
-
         .action-btn::before {
             content: '';
             position: absolute;
@@ -339,32 +301,27 @@
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
-
         .action-btn:active::before {
             width: 300px;
             height: 300px;
         }
-
         .action-btn:hover {
             transform: translateY(-5px);
             border-color: var(--neon-cyan);
             box-shadow: 0 10px 30px var(--neon-cyan-glow);
         }
-
         .action-icon {
             font-size: 32px;
             margin-bottom: 10px;
             position: relative;
             z-index: 2;
         }
-
         .action-label {
             font-size: 15px;
             font-weight: 600;
             position: relative;
             z-index: 2;
         }
-
         /* Bottom Navigation - 3D Glassmorphism */
         .bottom-nav {
             position: fixed;
@@ -381,7 +338,6 @@
             z-index: 1000;
             box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
         }
-
         .nav-btn {
             flex: 1;
             display: flex;
@@ -400,7 +356,6 @@
             position: relative;
             overflow: hidden;
         }
-
         .nav-btn::before {
             content: '';
             position: absolute;
@@ -413,17 +368,14 @@
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
-
         .nav-btn:active::before {
             width: 200px;
             height: 200px;
         }
-
         .nav-btn:hover {
             transform: translateY(-8px) scale(1.05);
             box-shadow: 0 8px 25px var(--neon-cyan-glow);
         }
-
         .nav-btn.active {
             background: rgba(0, 242, 255, 0.15);
             border-color: var(--neon-cyan);
@@ -431,23 +383,19 @@
             box-shadow: 0 0 25px var(--neon-cyan-glow), inset 0 0 20px rgba(0, 242, 255, 0.1);
             transform: translateY(-5px);
         }
-
         .nav-icon {
             font-size: 22px;
             position: relative;
             z-index: 2;
             transition: all 0.3s ease;
         }
-
         .nav-btn.active .nav-icon {
             animation: iconBounce 0.6s ease;
         }
-
         @keyframes iconBounce {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.2); }
         }
-
         .nav-label {
             font-size: 11px;
             font-weight: 600;
@@ -456,7 +404,6 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-
         /* Loading Animation */
         .loading {
             display: flex;
@@ -466,7 +413,6 @@
             flex-direction: column;
             gap: 20px;
         }
-
         .spinner {
             width: 60px;
             height: 60px;
@@ -475,11 +421,9 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-
         /* Responsive */
         @media (max-width: 380px) {
             .balance-amount { font-size: 36px; }
@@ -491,24 +435,21 @@
 </head>
 <body>
     <div class="bg-animation"></div>
-
-    <!-- Header -->
+    
     <div class="header">
         <div class="logo">StreamPerks</div>
         <a href="admin.html" class="admin-btn" id="adminBtn">
             <i class="fas fa-shield-halved"></i> Admin
         </a>
     </div>
-
-    <!-- Dashboard -->
+    
     <div class="dashboard">
         <div id="loadingScreen" class="loading">
             <div class="spinner"></div>
             <p style="color: var(--text-secondary);">Loading your dashboard...</p>
         </div>
-
+        
         <div id="mainContent" style="display: none;">
-            <!-- Profile Card -->
             <div class="profile-card">
                 <div class="profile-header">
                     <div class="profile-avatar" id="userAvatar">
@@ -523,15 +464,14 @@
                         </div>
                     </div>
                 </div>
-
+                
                 <div class="balance-section">
                     <div class="balance-label">Total Balance</div>
                     <div class="balance-amount" id="userBalance">0.00</div>
                     <div class="balance-currency">StreamPerks Tokens</div>
                 </div>
             </div>
-
-            <!-- Stats Grid -->
+            
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon">💰</div>
@@ -549,8 +489,7 @@
                     <div class="stat-label">Referrals</div>
                 </div>
             </div>
-
-            <!-- Quick Actions -->
+            
             <div class="quick-actions">
                 <a href="tasks.html" class="action-btn">
                     <div class="action-icon">✅</div>
@@ -563,8 +502,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Bottom Navigation -->
+    
     <nav class="bottom-nav">
         <a href="index.html" class="nav-btn active">
             <i class="fas fa-house nav-icon"></i>
@@ -583,236 +521,156 @@
             <span class="nav-label">Invite</span>
         </a>
     </nav>
-
+    
     <script>
-        // ============================================
-        // CONFIGURATION - ADD YOUR SUPABASE CREDENTIALS
-        // ============================================
         const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
-
-        // Initialize Telegram WebApp
+        
         const tg = window.Telegram.WebApp;
         tg.expand();
         tg.ready();
+        
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Supabase Client
-        const supabase = {
-            async query(sql, params = []) {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/execute_sql`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                    },
-                    body: JSON.stringify({ query: sql, params })
-                });
-                return await response.json();
-            },
-
-            async from(table) {
-                return {
-                    select: (columns = '*') => ({
-                        eq: async (column, value) => {
-                            const response = await fetch(
-                                `$${SUPABASE_URL}/rest/v1/$$ {table}?$${column}=eq.$$ {value}&select=${columns}`,
-                                {
-                                    headers: {
-                                        'apikey': SUPABASE_ANON_KEY,
-                                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                                    }
-                                }
-                            );
-                            return await response.json();
-                        },
-                        single: async () => {
-                            const response = await fetch(
-                                `$${SUPABASE_URL}/rest/v1/$$ {table}?select=${columns}`,
-                                {
-                                    headers: {
-                                        'apikey': SUPABASE_ANON_KEY,
-                                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                                    }
-                                }
-                            );
-                            const data = await response.json();
-                            return data[0];
-                        }
-                    }),
-                    insert: async (data) => {
-                        const response = await fetch(`$${SUPABASE_URL}/rest/v1/$$ {table}`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'apikey': SUPABASE_ANON_KEY,
-                                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                                'Prefer': 'return=representation'
-                            },
-                            body: JSON.stringify(data)
-                        });
-                        return await response.json();
-                    },
-                    update: async (data) => ({
-                        eq: async (column, value) => {
-                            const response = await fetch(
-                                `$${SUPABASE_URL}/rest/v1/$$ {table}?$${column}=eq.$$ {value}`,
-                                {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'apikey': SUPABASE_ANON_KEY,
-                                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                                        'Prefer': 'return=representation'
-                                    },
-                                    body: JSON.stringify(data)
-                                }
-                            );
-                            return await response.json();
-                        }
-                    })
-                };
-            }
-        };
-
-        // Get Telegram User Data
+        /**
+         * Gets the user data from the Telegram Web App SDK.
+         * This function assumes it's only called if tg.initDataUnsafe.user exists.
+         */
         function getTelegramUser() {
-            const user = tg.initDataUnsafe?.user;
+            const user = tg.initDataUnsafe.user;
             
-            if (user) {
-                return {
-                    telegram_id: user.id,
-                    username: user.username || null,
-                    first_name: user.first_name || 'User',
-                    last_name: user.last_name || null,
-                    photo_url: user.photo_url || null
-                };
-            }
-
-            // Fallback for testing outside Telegram
             return {
-                telegram_id: 123456789,
-                username: 'testuser',
-                first_name: 'Test',
-                last_name: 'User',
-                photo_url: null
+                telegram_id: user.id,
+                username: user.username || null,
+                first_name: user.first_name || 'User',
+                last_name: user.last_name || null,
+                photo_url: user.photo_url || null
             };
         }
 
-        // Initialize User
+        /**
+         * Initializes the user: fetches from Supabase or creates a new entry.
+         */
         async function initializeUser() {
             try {
+                // Get the user data from Telegram
                 const telegramUser = getTelegramUser();
                 
-                // Check if user exists
-                const existingUser = await supabase.from('users')
+                // 1. Try to find the user in the database
+                const { data: existingUser, error: fetchError } = await supabaseClient
+                    .from('users')
                     .select('*')
-                    .eq('telegram_id', telegramUser.telegram_id);
+                    .eq('telegram_id', telegramUser.telegram_id)
+                    .single();
 
                 let userData;
 
-                if (!existingUser || existingUser.length === 0) {
-                    // Create new user
-                    const newUser = await supabase.from('users').insert({
-                        telegram_id: telegramUser.telegram_id,
-                        username: telegramUser.username,
-                        first_name: telegramUser.first_name,
-                        last_name: telegramUser.last_name,
-                        photo_url: telegramUser.photo_url,
-                        balance: 0,
-                        role: 'user',
-                        verified: true,
-                        last_active: new Date().toISOString()
-                    });
+                // 2. If user not found (PGRST116), create a new one
+                if (fetchError && fetchError.code === 'PGRST116') {
+                    const { data: newUser, error: insertError } = await supabaseClient
+                        .from('users')
+                        .insert({
+                            telegram_id: telegramUser.telegram_id,
+                            username: telegramUser.username,
+                            first_name: telegramUser.first_name,
+                            last_name: telegramUser.last_name,
+                            photo_url: telegramUser.photo_url
+                        })
+                        .select()
+                        .single();
                     
-                    userData = newUser[0] || {
-                        ...telegramUser,
-                        balance: 0,
-                        total_earned: 0,
-                        total_withdrawn: 0,
-                        referral_count: 0,
-                        role: 'user'
-                    };
+                    if (insertError) throw insertError;
+                    userData = newUser;
                 } else {
-                    userData = existingUser[0];
+                    // 3. If user was found, use their data
+                    if (fetchError) throw fetchError;
+                    userData = existingUser;
                     
-                    // Update last active
-                    await supabase.from('users')
+                    // 4. Update last_active timestamp
+                    await supabaseClient
+                        .from('users')
                         .update({ last_active: new Date().toISOString() })
                         .eq('telegram_id', telegramUser.telegram_id);
                 }
 
-                // Display user data
+                // 5. Display the user's data on the page
                 displayUserData(userData);
                 
-                // Show admin button if user is admin
+                // 6. Show admin button if the user has the 'admin' role
                 if (userData.role === 'admin') {
                     document.getElementById('adminBtn').classList.add('show');
                 }
 
             } catch (error) {
                 console.error('Error initializing user:', error);
-                tg.showAlert('Error loading user data. Please try again.');
+                // Show a more user-friendly error on the loading screen
+                showError('Could not load your profile. Please try again later.');
             }
         }
 
-        // Display User Data
+        /**
+         * Updates the UI with the user's data.
+         * @param {object} user - The user data object from Supabase.
+         */
         function displayUserData(user) {
-            // Profile
             const userName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            
             document.getElementById('userName').textContent = userName;
             document.getElementById('userUsername').textContent = '@' + (user.username || 'user');
-
-            // Avatar
+            
             const avatarEl = document.getElementById('userAvatar');
             if (user.photo_url) {
                 avatarEl.innerHTML = `<img src="${user.photo_url}" alt="Profile">`;
             } else {
                 avatarEl.innerHTML = userName.charAt(0).toUpperCase();
             }
-
-            // Balance
+            
             document.getElementById('userBalance').textContent = 
                 parseFloat(user.balance || 0).toFixed(2);
-
-            // Stats
             document.getElementById('totalEarned').textContent = 
                 parseFloat(user.total_earned || 0).toFixed(2);
             document.getElementById('totalWithdrawn').textContent = 
                 parseFloat(user.total_withdrawn || 0).toFixed(2);
             document.getElementById('referralCount').textContent = 
                 user.referral_count || 0;
-
-            // Hide loading, show content
+            
+            // Hide loading screen and show the main content
             document.getElementById('loadingScreen').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
         }
 
-        // Initialize on load
+        /**
+         * Displays an error message on the screen.
+         * @param {string} message - The error message to display.
+         */
+        function showError(message) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            loadingScreen.innerHTML = `
+                <h2 style="color: var(--neon-cyan); text-align: center; margin-bottom: 15px; font-size: 24px;">
+                    <i class="fas fa-exclamation-triangle"></i> Error
+                </h2>
+                <p style="color: var(--text-secondary); text-align: center; max-width: 300px; font-size: 16px;">
+                    ${message}
+                </p>
+            `;
+            loadingScreen.style.display = 'flex';
+            document.getElementById('mainContent').style.display = 'none';
+        }
+
+        /**
+         * Main entry point when the page loads.
+         */
         window.addEventListener('DOMContentLoaded', () => {
-            initializeUser();
+            // Check if running inside Telegram by checking for user data
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                // We are in Telegram, proceed with initialization
+                initializeUser();
+            } else {
+                // Not in Telegram, show an error message
+                showError('This application must be opened inside the Telegram app.');
+            }
         });
 
-        // 3D Tilt Effect for Cards
-        document.querySelectorAll('.profile-card, .stat-card, .action-btn').forEach(card => {
-            card.addEventListener('mousemove', (e) => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
-                
-                const rotateX = (y - centerY) / 10;
-                const rotateY = (centerX - x) / 10;
-                
-                card.style.transform = `perspective(1000px) rotateX($${rotateX}deg) rotateY($$ {rotateY}deg) translateY(-5px)`;
-            });
-            
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = '';
-            });
-        });
     </script>
 </body>
 </html>
