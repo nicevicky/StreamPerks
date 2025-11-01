@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -663,7 +662,8 @@
         </a>
     </nav>
     
-    <script>
+
+<script>
         // ============================================
         // CONFIGURATION
         // ============================================
@@ -843,7 +843,6 @@
                 return settingsObj;
             } catch (err) {
                 console.error('Error fetching settings:', err);
-                // Return defaults
                 return {
                     daily_bonus: 1.00,
                     streak_bonus_multiplier: 0.10,
@@ -877,7 +876,7 @@
                 return data;
             } catch (err) {
                 console.error('Error fetching user:', err);
-                throw err; // Re-throw to handle in init
+                throw err;
             }
         }
         
@@ -920,7 +919,7 @@
                 return data ? data.map(item => item.task_id) : [];
             } catch (err) {
                 console.error('Error fetching completed tasks:', err);
-                return []; // Return empty array on error, don't block
+                return [];
             }
         }
         
@@ -928,7 +927,6 @@
             try {
                 const telegramId = getUserId();
                 
-                // Fetch ALL active ads
                 const { data: allAds, error: adsError } = await supabase
                     .from('ads')
                     .select('*')
@@ -940,7 +938,6 @@
                     throw adsError;
                 }
                 
-                // Fetch ads this user has already watched
                 const { data: watchedAds, error: watchedError } = await supabase
                     .from('user_ads')
                     .select('ad_id')
@@ -948,14 +945,11 @@
                 
                 if (watchedError) {
                     console.error('Watched ads fetch error:', watchedError);
-                    // Don't throw, just log
                 }
                 
-                // Create set of watched ad IDs
                 const watchedSet = new Set((watchedAds || []).map(item => item.ad_id));
                 watchedAdIds = watchedSet;
                 
-                // Filter out watched ads
                 const unwatchedAds = (allAds || []).filter(ad => !watchedSet.has(ad.id));
                 
                 console.log(`Total active ads: ${allAds?.length || 0}`);
@@ -965,7 +959,7 @@
                 return unwatchedAds;
             } catch (err) {
                 console.error('Error fetching ads:', err);
-                return []; // Return empty array on error
+                return [];
             }
         }
         
@@ -973,7 +967,6 @@
             try {
                 const telegramId = getUserId();
                 
-                // Insert completion record
                 const { error: taskError } = await supabase
                     .from('user_tasks')
                     .insert({
@@ -985,7 +978,6 @@
                 
                 if (taskError && taskError.code !== '23505') throw taskError;
                 
-                // Update user balance
                 const newBalance = parseFloat(currentUser.balance) + parseFloat(reward);
                 const newTotalEarned = parseFloat(currentUser.total_earned || 0) + parseFloat(reward);
                 
@@ -999,7 +991,6 @@
                 
                 if (balanceError) throw balanceError;
                 
-                // Log transaction
                 await supabase.from('transactions').insert({
                     user_id: telegramId,
                     type: 'task_reward',
@@ -1007,7 +998,6 @@
                     description: `Completed task #${taskId}`
                 });
                 
-                // Update local state
                 currentUser.balance = newBalance;
                 currentUser.total_earned = newTotalEarned;
                 updateBalanceDisplay();
@@ -1077,7 +1067,6 @@
                 
                 if (updateError) throw updateError;
                 
-                // Log transaction
                 await supabase.from('transactions').insert({
                     user_id: telegramId,
                     type: 'daily_bonus',
@@ -1085,7 +1074,6 @@
                     description: `Daily bonus (${newStreak} day streak)`
                 });
                 
-                // Update local state
                 currentUser.balance = newBalance;
                 currentUser.total_earned = newTotalEarned;
                 currentUser.last_daily_bonus = newLastBonus;
@@ -1108,7 +1096,6 @@
             try {
                 const telegramId = getUserId();
                 
-                // Verify ad is still active
                 const { data: adData, error: adCheckError } = await supabase
                     .from('ads')
                     .select('id, active')
@@ -1118,7 +1105,6 @@
                 
                 if (adCheckError || !adData) throw new Error('Ad not found or inactive');
                 
-                // Record ad watch
                 const { error: adError } = await supabase
                     .from('user_ads')
                     .insert({
@@ -1130,7 +1116,6 @@
                 
                 if (adError && adError.code !== '23505') throw adError;
                 
-                // Update user balance
                 const newBalance = parseFloat(currentUser.balance) + parseFloat(reward);
                 const newTotalEarned = parseFloat(currentUser.total_earned || 0) + parseFloat(reward);
                 
@@ -1144,7 +1129,6 @@
                 
                 if (balanceError) throw balanceError;
                 
-                // Log transaction
                 await supabase.from('transactions').insert({
                     user_id: telegramId,
                     type: 'ad_reward',
@@ -1152,7 +1136,6 @@
                     description: `Watched ad #${adId}`
                 });
                 
-                // Update local state
                 currentUser.balance = newBalance;
                 currentUser.total_earned = newTotalEarned;
                 watchedAdIds.add(adId);
@@ -1298,7 +1281,7 @@
                 const hoursRemaining = Math.floor((tomorrow - new Date()) / (1000 * 60 * 60));
                 const minutesRemaining = Math.floor(((tomorrow - new Date()) / (1000 * 60)) % 60);
                 
-                description = `Come back in $${hoursRemaining}h$$ {minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
+                description = `Come back in ${hoursRemaining}h ${minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
                 buttonHtml = `
                     <button class="btn-task btn-claimed" disabled>
                         <i class="fa-solid fa-check"></i> Claimed
@@ -1332,6 +1315,8 @@
             return activeAds.map(ad => {
                 const reward = parseFloat(ad.reward).toFixed(8);
                 const description = ad.description || 'Watch an ad to earn rewards!';
+                const zoneId = ad.zone_id.replace(/'/g, "\\'");
+                const sdkName = ad.sdk_name.replace(/'/g, "\\'");
                 
                 return `
                 <div class="task-card watch-ads" data-ad-id="${ad.id}">
@@ -1347,7 +1332,7 @@
                         </div>
                     </div>
                     <div class="task-action">
-                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd($${ad.id}, '$$ {ad.zone_id}', '$${ad.sdk_name}',$$ {ad.reward}, this)">
+                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd(${ad.id}, '${zoneId}', '${sdkName}', ${ad.reward}, this)">
                             <i class="fa-solid fa-play"></i> Watch
                         </button>
                     </div>
@@ -1362,7 +1347,6 @@
             const dailyBonusCardHtml = renderDailyBonusCard();
             const watchAdsCardsHtml = renderWatchAdsCards();
             
-            // Show message if no tasks AND no ads
             if (allTasks.length === 0 && activeAds.length === 0) {
                 container.innerHTML = `
                     <div class="tasks-grid">${dailyBonusCardHtml}</div>
@@ -1398,10 +1382,10 @@
                     <div class="task-action">
                         ${isCompleted ? 
                             '<button class="btn-task btn-completed" disabled><i class="fa-solid fa-check"></i> Done</button>' :
-                            `<button class="btn-task btn-start" onclick="startTask($${task.id}, '$$ {taskUrl}', '${task.task_type}')">
+                            `<button class="btn-task btn-start" onclick="startTask(${task.id}, '${taskUrl}', '${task.task_type}')">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Start
                             </button>
-                            <button class="btn-task btn-verify" onclick="verifyTask($${task.id}, '$$ {taskUrl}', '$${task.task_type}',$$ {task.reward})" style="display: none;">
+                            <button class="btn-task btn-verify" onclick="verifyTask(${task.id}, '${taskUrl}', '${task.task_type}', ${task.reward})" style="display: none;">
                                 <i class="fa-solid fa-circle-check"></i> Verify
                             </button>`
                         }
@@ -1410,7 +1394,7 @@
                 `;
             }).join('');
             
-            container.innerHTML = `<div class="tasks-grid">$${dailyBonusCardHtml}$$ {watchAdsCardsHtml}${tasksHTML}</div>`;
+            container.innerHTML = `<div class="tasks-grid">${dailyBonusCardHtml}${watchAdsCardsHtml}${tasksHTML}</div>`;
         }
         
         // ============================================
@@ -1567,15 +1551,12 @@
             init3DBackground();
             
             try {
-                // Set a timeout for loading
                 const timeoutPromise = new Promise((_, reject) => {
                     setTimeout(() => reject(new Error('Loading timeout - please check your connection')), 15000);
                 });
                 
-                // Load settings first (with timeout)
                 await Promise.race([fetchSettings(), timeoutPromise]);
                 
-                // Load user data (critical - must succeed)
                 const userPromise = fetchUser();
                 await Promise.race([userPromise, timeoutPromise]);
                 
@@ -1583,7 +1564,6 @@
                     throw new Error('Unable to load user data');
                 }
                 
-                // Load tasks and ads in parallel (non-critical)
                 console.log('Loading tasks and ads...');
                 const [tasks, completedIds, ads] = await Promise.all([
                     fetchTasks().catch(err => {
@@ -1611,7 +1591,6 @@
                 console.log(`- Completed: ${completedTaskIds.size}`);
                 console.log(`- Active Ads: ${activeAds.length}`);
                 
-                // Render the page
                 renderTasks();
                 
             } catch (err) {
@@ -1620,9 +1599,7 @@
             }
         }
         
-        // Start the app
         init();
     </script>
-</body>
+    </body>
 </html>
-
