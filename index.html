@@ -424,6 +424,10 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
         /* Responsive */
         @media (max-width: 380px) {
             .balance-amount { font-size: 36px; }
@@ -446,7 +450,7 @@
     <div class="dashboard">
         <div id="loadingScreen" class="loading">
             <div class="spinner"></div>
-            <p style="color: var(--text-secondary);">Loading your dashboard...</p>
+            <p class="loading-text">Loading your dashboard...</p>
         </div>
         
         <div id="mainContent" style="display: none;">
@@ -533,14 +537,23 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         /**
+         * Updates loading screen text
+         */
+        function updateLoadingText(text) {
+            const loadingText = document.querySelector('.loading-text');
+            if (loadingText) {
+                loadingText.textContent = text;
+            }
+        }
+
+        /**
          * Gets the user data from the Telegram Web App SDK.
-         * This function assumes it's only called if tg.initDataUnsafe.user exists.
          */
         function getTelegramUser() {
             const user = tg.initDataUnsafe.user;
             
             return {
-                telegram_id: user.id,
+                telegram_id: user.id.toString(),
                 username: user.username || null,
                 first_name: user.first_name || 'User',
                 last_name: user.last_name || null,
@@ -549,126 +562,233 @@
         }
 
         /**
-         * Initializes the user: fetches from Supabase or creates a new entry.
+         * STEP 1: Check if user exists in database
          */
-        async function initializeUser() {
+        async function checkUserExists(telegram_id) {
             try {
-                // Get the user data from Telegram
-                const telegramUser = getTelegramUser();
-                
-                // 1. Try to find the user in the database
-                const { data: existingUser, error: fetchError } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('users')
                     .select('*')
-                    .eq('telegram_id', telegramUser.telegram_id)
-                    .single();
+                    .eq('telegram_id', telegram_id)
+                    .maybeSingle();
 
-                let userData;
-
-                // 2. If user not found (PGRST116), create a new one
-                if (fetchError && fetchError.code === 'PGRST116') {
-                    const { data: newUser, error: insertError } = await supabaseClient
-                        .from('users')
-                        .insert({
-                            telegram_id: telegramUser.telegram_id,
-                            username: telegramUser.username,
-                            first_name: telegramUser.first_name,
-                            last_name: telegramUser.last_name,
-                            photo_url: telegramUser.photo_url
-                        })
-                        .select()
-                        .single();
-                    
-                    if (insertError) throw insertError;
-                    userData = newUser;
-                } else {
-                    // 3. If user was found, use their data
-                    if (fetchError) throw fetchError;
-                    userData = existingUser;
-                    
-                    // 4. Update last_active timestamp
-                    await supabaseClient
-                        .from('users')
-                        .update({ last_active: new Date().toISOString() })
-                        .eq('telegram_id', telegramUser.telegram_id);
+                if (error) {
+                    console.error('Error checking user:', error);
+                    throw error;
                 }
 
-                // 5. Display the user's data on the page
-                displayUserData(userData);
+                return data; // null if user doesn't exist, user object if exists
+            } catch (error) {
+                console.error('Error in checkUserExists:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * STEP 2: Create new user account
+         */
+        async function createUserAccount(telegramUser) {
+            try {
+                updateLoadingText('Creating your account...');
                 
-                // 6. Show admin button if the user has the 'admin' role
+                const newUserData = {
+                    telegram_id: telegramUser.telegram_id,
+                    username: telegramUser.username,
+                    first_name: telegramUser.first_name,
+                    last_name: telegramUser.last_name,
+                    photo_url: telegramUser.photo_url,
+                    balance: 0,
+                    total_earned: 0,
+                    total_withdrawn: 0,
+                    referral_count: 0,
+                    role: 'user',
+                    created_at: new Date().toISOString(),
+                    last_active: new Date().toISOString()
+                };
+
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .insert([newUserData])
+                    .select()
+                    .single();
+
+                if (error) {
+                    console.error('Error creating user:', error);
+                    throw error;
+                }
+
+                console.log('User account created successfully:', data);
+                return data;
+            } catch (error) {
+                console.error('Error in createUserAccount:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * STEP 3: Extract and return user information from database
+         */
+        async function extractUserInformation(telegram_id) {
+            try {
+                updateLoadingText('Extracting user information...');
+                
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('telegram_id', telegram_id)
+                    .single();
+
+                if (error) {
+                    console.error('Error extracting user info:', error);
+                    throw error;
+                }
+
+                console.log('User information extracted:', data);
+                return data;
+            } catch (error) {
+                console.error('Error in extractUserInformation:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * STEP 4: Initialize user (update last_active)
+         */
+        async function initializeUserSession(telegram_id) {
+            try {
+                updateLoadingText('Initializing session...');
+                
+                const { error } = await supabaseClient
+                    .from('users')
+                    .update({ last_active: new Date().toISOString() })
+                    .eq('telegram_id', telegram_id);
+
+                if (error) {
+                    console.error('Error initializing session:', error);
+                    throw error;
+                }
+
+                console.log('Session initialized successfully');
+            } catch (error) {
+                console.error('Error in initializeUserSession:', error);
+                throw error;
+            }
+        }
+
+        /**
+         * STEP 5: Load and display dashboard
+         */
+        async function loadDashboard(userData) {
+            try {
+                updateLoadingText('Loading dashboard...');
+                
+                // Display user data
+                const userName = userData.first_name + (userData.last_name ? ' ' + userData.last_name : '');
+                
+                document.getElementById('userName').textContent = userName;
+                document.getElementById('userUsername').textContent = '@' + (userData.username || 'user');
+                
+                const avatarEl = document.getElementById('userAvatar');
+                if (userData.photo_url) {
+                    avatarEl.innerHTML = `<img src="${userData.photo_url}" alt="Profile">`;
+                } else {
+                    avatarEl.innerHTML = userName.charAt(0).toUpperCase();
+                }
+                
+                document.getElementById('userBalance').textContent = 
+                    parseFloat(userData.balance || 0).toFixed(2);
+                document.getElementById('totalEarned').textContent = 
+                    parseFloat(userData.total_earned || 0).toFixed(2);
+                document.getElementById('totalWithdrawn').textContent = 
+                    parseFloat(userData.total_withdrawn || 0).toFixed(2);
+                document.getElementById('referralCount').textContent = 
+                    userData.referral_count || 0;
+                
+                // Show admin button if user is admin
                 if (userData.role === 'admin') {
                     document.getElementById('adminBtn').classList.add('show');
                 }
 
+                // Hide loading, show dashboard
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                console.log('Dashboard loaded successfully');
             } catch (error) {
-                console.error('Error initializing user:', error);
-                // Show a more user-friendly error on the loading screen
-                showError('Could not load your profile. Please try again later.');
+                console.error('Error in loadDashboard:', error);
+                throw error;
             }
         }
 
         /**
-         * Updates the UI with the user's data.
-         * @param {object} user - The user data object from Supabase.
+         * Main initialization function with proper flow
          */
-        function displayUserData(user) {
-            const userName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
-            
-            document.getElementById('userName').textContent = userName;
-            document.getElementById('userUsername').textContent = '@' + (user.username || 'user');
-            
-            const avatarEl = document.getElementById('userAvatar');
-            if (user.photo_url) {
-                avatarEl.innerHTML = `<img src="${user.photo_url}" alt="Profile">`;
-            } else {
-                avatarEl.innerHTML = userName.charAt(0).toUpperCase();
+        async function initializeApp() {
+            try {
+                // Validate Telegram environment
+                if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
+                    showError('This application must be opened inside the Telegram app.');
+                    return;
+                }
+
+                updateLoadingText('Checking user...');
+                
+                // Get Telegram user data
+                const telegramUser = getTelegramUser();
+                console.log('Telegram user data:', telegramUser);
+
+                // STEP 1: Check if user exists
+                let userData = await checkUserExists(telegramUser.telegram_id);
+
+                // STEP 2: If user doesn't exist, create account
+                if (!userData) {
+                    console.log('User not found, creating new account...');
+                    userData = await createUserAccount(telegramUser);
+                } else {
+                    console.log('User found in database');
+                }
+
+                // STEP 3: Extract user information (refresh from DB to ensure latest data)
+                userData = await extractUserInformation(telegramUser.telegram_id);
+
+                // STEP 4: Initialize user session
+                await initializeUserSession(telegramUser.telegram_id);
+
+                // STEP 5: Load dashboard
+                await loadDashboard(userData);
+
+            } catch (error) {
+                console.error('Error in initializeApp:', error);
+                showError('Failed to load dashboard. Please try refreshing the page.');
             }
-            
-            document.getElementById('userBalance').textContent = 
-                parseFloat(user.balance || 0).toFixed(2);
-            document.getElementById('totalEarned').textContent = 
-                parseFloat(user.total_earned || 0).toFixed(2);
-            document.getElementById('totalWithdrawn').textContent = 
-                parseFloat(user.total_withdrawn || 0).toFixed(2);
-            document.getElementById('referralCount').textContent = 
-                user.referral_count || 0;
-            
-            // Hide loading screen and show the main content
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
         }
 
         /**
          * Displays an error message on the screen.
-         * @param {string} message - The error message to display.
          */
         function showError(message) {
             const loadingScreen = document.getElementById('loadingScreen');
             loadingScreen.innerHTML = `
-                <h2 style="color: var(--neon-cyan); text-align: center; margin-bottom: 15px; font-size: 24px;">
-                    <i class="fas fa-exclamation-triangle"></i> Error
-                </h2>
-                <p style="color: var(--text-secondary); text-align: center; max-width: 300px; font-size: 16px;">
-                    ${message}
-                </p>
+                <div style="text-align: center; max-width: 350px; padding: 20px;">
+                    <div style="font-size: 60px; margin-bottom: 20px;">⚠️</div>
+                    <h2 style="color: var(--neon-cyan); margin-bottom: 15px; font-size: 22px;">
+                        Oops! Something went wrong
+                    </h2>
+                    <p style="color: var(--text-secondary); font-size: 15px; line-height: 1.6;">
+                        ${message}
+                    </p>
+                </div>
             `;
             loadingScreen.style.display = 'flex';
             document.getElementById('mainContent').style.display = 'none';
         }
 
         /**
-         * Main entry point when the page loads.
+         * Entry point when page loads
          */
         window.addEventListener('DOMContentLoaded', () => {
-            // Check if running inside Telegram by checking for user data
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                // We are in Telegram, proceed with initialization
-                initializeUser();
-            } else {
-                // Not in Telegram, show an error message
-                showError('This application must be opened inside the Telegram app.');
-            }
+            console.log('App starting...');
+            initializeApp();
         });
 
     </script>
