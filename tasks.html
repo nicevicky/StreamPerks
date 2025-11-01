@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -783,6 +784,20 @@
             }, 4000);
         }
         
+        function showLoadingError(message) {
+            const container = document.getElementById('tasksContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <h3>Loading Error</h3>
+                    <p>${message}</p>
+                    <button class="btn-task btn-start" onclick="location.reload()" style="margin-top: 20px;">
+                        <i class="fa-solid fa-rotate-right"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+        
         function getUserId() {
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 return tg.initDataUnsafe.user.id;
@@ -802,7 +817,7 @@
         }
         
         // ============================================
-        // DATABASE FUNCTIONS
+        // DATABASE FUNCTIONS WITH ERROR HANDLING
         // ============================================
         
         async function fetchSettings() {
@@ -811,7 +826,10 @@
                     .from('settings')
                     .select('*');
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Settings fetch error:', error);
+                    throw error;
+                }
                 
                 const settingsObj = {};
                 if (data) {
@@ -825,6 +843,7 @@
                 return settingsObj;
             } catch (err) {
                 console.error('Error fetching settings:', err);
+                // Return defaults
                 return {
                     daily_bonus: 1.00,
                     streak_bonus_multiplier: 0.10,
@@ -845,15 +864,20 @@
                 const { data, error } = await supabase
                     .from('users')
                     .select('*')
-                    .eq('telegram_id', telegramId) .single();
+                    .eq('telegram_id', telegramId)
+                    .single();
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('User fetch error:', error);
+                    throw error;
+                }
+                
                 currentUser = data;
                 updateBalanceDisplay();
                 return data;
             } catch (err) {
                 console.error('Error fetching user:', err);
-                return null;
+                throw err; // Re-throw to handle in init
             }
         }
         
@@ -865,11 +889,16 @@
                     .eq('is_active', true)
                     .order('created_at', { ascending: false });
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Tasks fetch error:', error);
+                    throw error;
+                }
+                
+                console.log(`Fetched ${data?.length || 0} tasks`);
                 return data || [];
             } catch (err) {
                 console.error('Error fetching tasks:', err);
-                return [];
+                throw err;
             }
         }
         
@@ -882,11 +911,16 @@
                     .eq('user_id', telegramId)
                     .eq('status', 'completed');
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Completed tasks fetch error:', error);
+                    throw error;
+                }
+                
+                console.log(`Fetched ${data?.length || 0} completed tasks`);
                 return data ? data.map(item => item.task_id) : [];
             } catch (err) {
                 console.error('Error fetching completed tasks:', err);
-                return [];
+                return []; // Return empty array on error, don't block
             }
         }
         
@@ -901,7 +935,10 @@
                     .eq('active', true)
                     .order('created_at', { ascending: false });
                 
-                if (adsError) throw adsError;
+                if (adsError) {
+                    console.error('Ads fetch error:', adsError);
+                    throw adsError;
+                }
                 
                 // Fetch ads this user has already watched
                 const { data: watchedAds, error: watchedError } = await supabase
@@ -909,7 +946,10 @@
                     .select('ad_id')
                     .eq('user_id', telegramId);
                 
-                if (watchedError) throw watchedError;
+                if (watchedError) {
+                    console.error('Watched ads fetch error:', watchedError);
+                    // Don't throw, just log
+                }
                 
                 // Create set of watched ad IDs
                 const watchedSet = new Set((watchedAds || []).map(item => item.ad_id));
@@ -925,7 +965,7 @@
                 return unwatchedAds;
             } catch (err) {
                 console.error('Error fetching ads:', err);
-                return [];
+                return []; // Return empty array on error
             }
         }
         
@@ -1232,7 +1272,7 @@
         }
         
         // ============================================
-        // RENDERING FUNCTIONS
+        // RENDERING FUNCTIONS (FIXED TEMPLATE LITERALS)
         // ============================================
         
         function renderDailyBonusCard() {
@@ -1322,7 +1362,7 @@
             const dailyBonusCardHtml = renderDailyBonusCard();
             const watchAdsCardsHtml = renderWatchAdsCards();
             
-            // STOP LOADING if no tasks AND no ads
+            // Show message if no tasks AND no ads
             if (allTasks.length === 0 && activeAds.length === 0) {
                 container.innerHTML = `
                     <div class="tasks-grid">${dailyBonusCardHtml}</div>
@@ -1339,6 +1379,7 @@
                 const isCompleted = completedTaskIds.has(task.id);
                 const cardClass = isCompleted ? 'task-card completed' : 'task-card';
                 const icon = task.icon || 'fa-tasks';
+                const taskUrl = (task.task_url || '').replace(/'/g, "\\'");
                 
                 return `
                 <div class="${cardClass}" data-task-id="${task.id}">
@@ -1357,10 +1398,10 @@
                     <div class="task-action">
                         ${isCompleted ? 
                             '<button class="btn-task btn-completed" disabled><i class="fa-solid fa-check"></i> Done</button>' :
-                            `<button class="btn-task btn-start" onclick="startTask($${task.id}, '$$ {(task.task_url || '').replace(/'/g, "\\'")}', '${task.task_type}')">
+                            `<button class="btn-task btn-start" onclick="startTask($${task.id}, '$$ {taskUrl}', '${task.task_type}')">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Start
                             </button>
-                            <button class="btn-task btn-verify" onclick="verifyTask($${task.id}, '$$ {(task.task_url || '').replace(/'/g, "\\'")}', '$${task.task_type}',$$ {task.reward})" style="display: none;">
+                            <button class="btn-task btn-verify" onclick="verifyTask($${task.id}, '$$ {taskUrl}', '$${task.task_type}',$$ {task.reward})" style="display: none;">
                                 <i class="fa-solid fa-circle-check"></i> Verify
                             </button>`
                         }
@@ -1515,7 +1556,7 @@
         };
         
         // ============================================
-        // INITIALIZATION
+        // INITIALIZATION WITH TIMEOUT AND ERROR HANDLING
         // ============================================
         
         async function init() {
@@ -1525,38 +1566,63 @@
             
             init3DBackground();
             
-            await fetchSettings();
-            
-            await fetchUser();
-            if (!currentUser) {
-                showMessage('Unable to load user data. Please try again.', 'error');
-                document.getElementById('tasksContainer').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fa-solid fa-user-xmark"></i>
-                        <h3>Failed to Load User</h3>
-                        <p>Please restart the app and try again.</p>
-                    </div>`;
-                return;
+            try {
+                // Set a timeout for loading
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Loading timeout - please check your connection')), 15000);
+                });
+                
+                // Load settings first (with timeout)
+                await Promise.race([fetchSettings(), timeoutPromise]);
+                
+                // Load user data (critical - must succeed)
+                const userPromise = fetchUser();
+                await Promise.race([userPromise, timeoutPromise]);
+                
+                if (!currentUser) {
+                    throw new Error('Unable to load user data');
+                }
+                
+                // Load tasks and ads in parallel (non-critical)
+                console.log('Loading tasks and ads...');
+                const [tasks, completedIds, ads] = await Promise.all([
+                    fetchTasks().catch(err => {
+                        console.error('Tasks failed to load:', err);
+                        showMessage('Failed to load tasks', 'error');
+                        return [];
+                    }),
+                    fetchCompletedTasks().catch(err => {
+                        console.error('Completed tasks failed to load:', err);
+                        return [];
+                    }),
+                    fetchActiveAds().catch(err => {
+                        console.error('Ads failed to load:', err);
+                        showMessage('Failed to load ads', 'error');
+                        return [];
+                    })
+                ]);
+                
+                allTasks = tasks;
+                completedTaskIds = new Set(completedIds);
+                activeAds = ads;
+                
+                console.log('Data loaded successfully:');
+                console.log(`- Tasks: ${allTasks.length}`);
+                console.log(`- Completed: ${completedTaskIds.size}`);
+                console.log(`- Active Ads: ${activeAds.length}`);
+                
+                // Render the page
+                renderTasks();
+                
+            } catch (err) {
+                console.error('Initialization error:', err);
+                showLoadingError(err.message || 'Failed to load data. Please try again.');
             }
-            
-            // Load tasks and ads in parallel
-            const [tasks, completedIds, ads] = await Promise.all([
-                fetchTasks(),
-                fetchCompletedTasks(),
-                fetchActiveAds()
-            ]);
-            
-            allTasks = tasks;
-            completedTaskIds = new Set(completedIds);
-            activeAds = ads;
-            
-            // Render - will show "No Tasks or Ads Available" if both are empty
-            renderTasks();
         }
         
+        // Start the app
         init();
     </script>
 </body>
 </html>
 
-                    
