@@ -684,13 +684,12 @@
         let completedTaskIds = new Set();
         let activeAds = [];
         let watchedAdIds = new Set();
-        let appSettings = {}; // Store settings from database
+        let appSettings = {};
         
         // ============================================
         // CHECK IF OPENED IN TELEGRAM
         // ============================================
         function checkTelegramEnvironment() {
-            // Check if running in Telegram WebApp
             if (!tg.initDataUnsafe || !tg.initDataUnsafe.user) {
                 document.getElementById('tasksContainer').innerHTML = `
                     <div class="telegram-warning">
@@ -785,7 +784,6 @@
         }
         
         function getUserId() {
-            // ONLY get from Telegram (no test user)
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 return tg.initDataUnsafe.user.id;
             }
@@ -796,7 +794,6 @@
             if (currentUser) {
                 document.getElementById('userBalance').textContent = parseFloat(currentUser.balance).toFixed(8);
                 
-                // Update streak display
                 if (currentUser.daily_streak > 0) {
                     document.getElementById('streakDisplay').style.display = 'flex';
                     document.getElementById('streakNumber').textContent = currentUser.daily_streak;
@@ -808,9 +805,6 @@
         // DATABASE FUNCTIONS
         // ============================================
         
-        /**
-         * Fetch app settings from database
-         */
         async function fetchSettings() {
             try {
                 const { data, error } = await supabase
@@ -819,18 +813,18 @@
                 
                 if (error) throw error;
                 
-                // Convert array to object for easy access
-                      const settingsObj = {};
-                data.forEach(setting => {
-                    settingsObj[setting.setting_key] = parseFloat(setting.setting_value);
-                });
+                const settingsObj = {};
+                if (data) {
+                    data.forEach(setting => {
+                        settingsObj[setting.setting_key] = parseFloat(setting.setting_value);
+                    });
+                }
                 
                 appSettings = settingsObj;
                 console.log('Loaded settings:', appSettings);
                 return settingsObj;
             } catch (err) {
                 console.error('Error fetching settings:', err);
-                // Fallback defaults if database fails
                 return {
                     daily_bonus: 1.00,
                     streak_bonus_multiplier: 0.10,
@@ -841,9 +835,6 @@
             }
         }
         
-        /**
-         * Fetch current user from database
-         */
         async function fetchUser() {
             try {
                 const telegramId = getUserId();
@@ -854,8 +845,7 @@
                 const { data, error } = await supabase
                     .from('users')
                     .select('*')
-                    .eq('telegram_id', telegramId)
-                    .single();
+                    .eq('telegram_id', telegramId) .single();
                 
                 if (error) throw error;
                 currentUser = data;
@@ -867,9 +857,6 @@
             }
         }
         
-        /**
-         * Fetch all active tasks from database
-         */
         async function fetchTasks() {
             try {
                 const { data, error } = await supabase
@@ -886,9 +873,6 @@
             }
         }
         
-        /**
-         * Fetch completed tasks for current user
-         */
         async function fetchCompletedTasks() {
             try {
                 const telegramId = getUserId();
@@ -899,22 +883,18 @@
                     .eq('status', 'completed');
                 
                 if (error) throw error;
-                return data.map(item => item.task_id);
+                return data ? data.map(item => item.task_id) : [];
             } catch (err) {
                 console.error('Error fetching completed tasks:', err);
                 return [];
             }
         }
         
-        /**
-         * Fetch ALL active ads, filter out watched ones
-         * This handles even 100-1000 ads by loading all and filtering client-side
-         */
         async function fetchActiveAds() {
             try {
                 const telegramId = getUserId();
                 
-                // Fetch ALL active ads (no limit)
+                // Fetch ALL active ads
                 const { data: allAds, error: adsError } = await supabase
                     .from('ads')
                     .select('*')
@@ -931,11 +911,11 @@
                 
                 if (watchedError) throw watchedError;
                 
-                // Create set of watched ad IDs for fast lookup
+                // Create set of watched ad IDs
                 const watchedSet = new Set((watchedAds || []).map(item => item.ad_id));
                 watchedAdIds = watchedSet;
                 
-                // Filter out ads user has already watched
+                // Filter out watched ads
                 const unwatchedAds = (allAds || []).filter(ad => !watchedSet.has(ad.id));
                 
                 console.log(`Total active ads: ${allAds?.length || 0}`);
@@ -949,9 +929,6 @@
             }
         }
         
-        /**
-         * Mark task as completed and reward user
-         */
         async function markTaskCompleted(taskId, reward) {
             try {
                 const telegramId = getUserId();
@@ -966,12 +943,11 @@
                         completed_at: new Date().toISOString()
                     });
                 
-                // Ignore duplicate key errors (already completed)
                 if (taskError && taskError.code !== '23505') throw taskError;
                 
-                // Update user balance and total earned
+                // Update user balance
                 const newBalance = parseFloat(currentUser.balance) + parseFloat(reward);
-                const newTotalEarned = parseFloat(currentUser.total_earned) + parseFloat(reward);
+                const newTotalEarned = parseFloat(currentUser.total_earned || 0) + parseFloat(reward);
                 
                 const { error: balanceError } = await supabase
                     .from('users')
@@ -1002,24 +978,15 @@
             }
         }
         
-        /**
-         * Calculate daily bonus with streak multiplier
-         */
         function calculateDailyBonus(streakDays) {
             const baseBonus = appSettings.daily_bonus || 1.00;
             const multiplier = appSettings.streak_bonus_multiplier || 0.10;
             const maxBonus = appSettings.max_streak_bonus || 5.00;
             
-            // Calculate bonus: base + (streak * multiplier)
             const bonus = baseBonus + (streakDays * multiplier);
-            
-            // Cap at max bonus
             return Math.min(bonus, maxBonus);
         }
         
-        /**
-         * Check if user can claim daily bonus and update streak
-         */
         function canClaimDailyBonus() {
             if (!currentUser.last_daily_bonus) {
                 return { canClaim: true, streak: 0, bonus: calculateDailyBonus(0) };
@@ -1028,28 +995,21 @@
             const lastClaim = new Date(currentUser.last_daily_bonus);
             const now = new Date();
             
-            // Reset time to midnight for accurate day comparison
             const lastClaimDay = new Date(lastClaim.getFullYear(), lastClaim.getMonth(), lastClaim.getDate());
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
             const daysDiff = Math.floor((today - lastClaimDay) / (1000 * 60 * 60 * 24));
             
             if (daysDiff === 0) {
-                // Already claimed today
                 return { canClaim: false, streak: currentUser.daily_streak, nextClaim: lastClaim };
             } else if (daysDiff === 1) {
-                // Consecutive day - increase streak
                 const newStreak = currentUser.daily_streak + 1;
                 return { canClaim: true, streak: newStreak, bonus: calculateDailyBonus(newStreak) };
             } else {
-                // Streak broken - reset to 0
                 return { canClaim: true, streak: 0, bonus: calculateDailyBonus(0) };
             }
         }
         
-        /**
-         * Claim daily bonus with streak calculation
-         */
         async function claimDailyBonus() {
             try {
                 const telegramId = getUserId();
@@ -1061,11 +1021,10 @@
                 
                 const reward = bonusInfo.bonus;
                 const newBalance = parseFloat(currentUser.balance) + reward;
-                const newTotalEarned = parseFloat(currentUser.total_earned) + reward;
+                const newTotalEarned = parseFloat(currentUser.total_earned || 0) + reward;
                 const newLastBonus = new Date().toISOString();
                 const newStreak = bonusInfo.streak;
                 
-                // Update user record with new balance, streak, and last claim time
                 const { error: updateError } = await supabase
                     .from('users')
                     .update({
@@ -1105,9 +1064,6 @@
             }
         }
         
-        /**
-         * Record ad watch and reward user
-         */
         async function recordAdWatch(adId, reward) {
             try {
                 const telegramId = getUserId();
@@ -1132,7 +1088,6 @@
                         watched_at: new Date().toISOString()
                     });
                 
-                // Ignore duplicate key errors
                 if (adError && adError.code !== '23505') throw adError;
                 
                 // Update user balance
@@ -1174,12 +1129,8 @@
         // AD SDK INTEGRATION
         // ============================================
         
-        /**
-         * Load external ad SDK
-         */
         function loadAdSDK(zoneId, sdkName) {
             return new Promise((resolve, reject) => {
-                // Check if already loaded
                 if (document.querySelector(`script[data-zone="${zoneId}"]`)) {
                     resolve();
                     return;
@@ -1202,23 +1153,17 @@
         // TELEGRAM VERIFICATION
         // ============================================
         
-        /**
-         * Extract Telegram username or invite code from link
-         */
         function extractTelegramUsernameOrCode(link) {
-            // Public channel/group: t.me/username
             const publicMatch = link.match(/t\.me\/([a-zA-Z0-9_]+)/);
             if (publicMatch && publicMatch[1] && !publicMatch[1].startsWith('joinchat')) {
                 return { type: 'username', value: publicMatch[1] };
             }
             
-            // Private invite: t.me/+code
             const privateMatch = link.match(/t\.me\/\+([a-zA-Z0-9_-]+)/);
             if (privateMatch && privateMatch[1]) {
                 return { type: 'invite', value: privateMatch[1] };
             }
             
-            // Old format: t.me/joinchat/code
             const joinchatMatch = link.match(/t\.me\/joinchat\/([a-zA-Z0-9_-]+)/);
             if (joinchatMatch && joinchatMatch[1]) {
                 return { type: 'invite', value: joinchatMatch[1] };
@@ -1227,12 +1172,8 @@
             return null;
         }
         
-        /**
-         * Verify bot is admin in channel/group
-         */
         async function verifyBotIsAdmin(chatIdentifier) {
             try {
-                // Get bot info
                 const botInfoUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getMe`;
                 const botResponse = await fetch(botInfoUrl);
                 const botData = await botResponse.json();
@@ -1243,7 +1184,6 @@
                 
                 const botId = botData.result.id;
                 
-                // Check bot's status in chat
                 const memberUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatMember?chat_id=${encodeURIComponent(chatIdentifier)}&user_id=${botId}`;
                 const memberResponse = await fetch(memberUrl);
                 const memberData = await memberResponse.json();
@@ -1262,9 +1202,6 @@
             }
         }
         
-        /**
-         * Verify user membership in Telegram channel/group
-         */
         async function verifyTelegramMembership(chatId, userId) {
             try {
                 const extracted = extractTelegramUsernameOrCode(chatId);
@@ -1274,7 +1211,6 @@
                 if (extracted.type === 'username') {
                     chatIdentifier = '@' + extracted.value;
                 } else {
-                    // Can't verify private groups without bot admin access
                     return true;
                 }
                 
@@ -1299,9 +1235,6 @@
         // RENDERING FUNCTIONS
         // ============================================
         
-        /**
-         * Render daily bonus card with streak info
-         */
         function renderDailyBonusCard() {
             const bonusInfo = canClaimDailyBonus();
             const reward = bonusInfo.bonus.toFixed(8);
@@ -1353,13 +1286,9 @@
             `;
         }
         
-        /**
-         * Render ALL unwatched ads (even 100-1000)
-         */
         function renderWatchAdsCards() {
             if (activeAds.length === 0) return '';
             
-            // Render ALL ads in array - no limit
             return activeAds.map(ad => {
                 const reward = parseFloat(ad.reward).toFixed(8);
                 const description = ad.description || 'Watch an ad to earn rewards!';
@@ -1387,22 +1316,20 @@
             }).join('');
         }
         
-        /**
-         * Render all tasks
-         */
         function renderTasks() {
             const container = document.getElementById('tasksContainer');
             
             const dailyBonusCardHtml = renderDailyBonusCard();
             const watchAdsCardsHtml = renderWatchAdsCards();
             
+            // STOP LOADING if no tasks AND no ads
             if (allTasks.length === 0 && activeAds.length === 0) {
                 container.innerHTML = `
                     <div class="tasks-grid">${dailyBonusCardHtml}</div>
                     <div class="empty-state">
                         <i class="fa-solid fa-inbox"></i>
-                        <h3>No Tasks Available</h3>
-                        <p>Check back later for new tasks!</p>
+                        <h3>No Tasks or Ads Available</h3>
+                        <p>Check back later for new tasks and ads!</p>
                     </div>
                 `;
                 return;
@@ -1449,9 +1376,6 @@
         // EVENT HANDLERS
         // ============================================
         
-        /**
-         * Handle daily bonus claim
-         */
         window.handleClaimBonus = async function(button) {
             button.classList.add('loading');
             button.disabled = true;
@@ -1468,26 +1392,19 @@
             }
         }
         
-        /**
-         * Handle ad watch
-         */
         window.handleWatchAd = async function(adId, zoneId, sdkName, reward, button) {
             button.classList.add('loading');
             button.disabled = true;
             
             try {
-                // Load ad SDK
                 await loadAdSDK(zoneId, sdkName);
                 
-                // Display ad
                 if (typeof window[sdkName] === 'function') {
                     window[sdkName]().then(async () => {
-                        // Ad watched successfully
                         const success = await recordAdWatch(adId, reward);
                         
                         if (success) {
                             showMessage(`You earned ${parseFloat(reward).toFixed(8)} Perks!`, 'success');
-                            // Remove this ad from the list and re-render
                             activeAds = activeAds.filter(ad => ad.id !== adId);
                             renderTasks();
                         } else {
@@ -1512,31 +1429,23 @@
             }
         }
         
-        /**
-         * Start a task (open link)
-         */
         window.startTask = function(taskId, link, taskType) {
             const card = document.querySelector(`[data-task-id="${taskId}"]`);
             const startBtn = card.querySelector('.btn-start');
             const verifyBtn = card.querySelector('.btn-verify');
             
-            // Open link based on task type
             if (taskType === 'join_channel' || taskType === 'join_group' || taskType === 'social') {
                 tg.openTelegramLink(link);
             } else {
                 tg.openLink(link);
             }
             
-            // Show verify button after delay
             setTimeout(() => {
                 startBtn.style.display = 'none';
                 verifyBtn.style.display = 'flex';
             }, 2000);
         };
         
-        /**
-         * Verify task completion
-         */
         window.verifyTask = async function(taskId, link, taskType, reward) {
             const card = document.querySelector(`[data-task-id="${taskId}"]`);
             const verifyBtn = card.querySelector('.btn-verify');
@@ -1547,7 +1456,6 @@
             try {
                 let verified = false;
                 
-                // Verify Telegram membership if applicable
                 if (taskType === 'join_channel' || taskType === 'join_group' || taskType === 'social') {
                     const extracted = extractTelegramUsernameOrCode(link);
                     
@@ -1562,7 +1470,6 @@
                     if (extracted.type === 'username') {
                         chatIdentifier = '@' + extracted.value;
                         
-                        // Verify bot is admin
                         const botCheck = await verifyBotIsAdmin(chatIdentifier);
                         
                         if (!botCheck.isAdmin) {
@@ -1572,7 +1479,6 @@
                             return;
                         }
                         
-                        // Verify user membership
                         const userId = getUserId();
                         verified = await verifyTelegramMembership(link, userId);
                         
@@ -1583,15 +1489,12 @@
                             return;
                         }
                     } else {
-                        // Private group - can't verify, trust user
                         verified = true;
                     }
                 } else {
-                    // Other task types - trust user
                     verified = true;
                 }
                 
-                // Mark task as completed
                 const success = await markTaskCompleted(taskId, reward);
                 
                 if (success) {
@@ -1615,22 +1518,15 @@
         // INITIALIZATION
         // ============================================
         
-        /**
-         * Initialize the app
-         */
         async function init() {
-            // Check if opened in Telegram
             if (!checkTelegramEnvironment()) {
                 return;
             }
             
-            // Initialize 3D background
             init3DBackground();
             
-            // Load settings from database
             await fetchSettings();
             
-            // Load user data
             await fetchUser();
             if (!currentUser) {
                 showMessage('Unable to load user data. Please try again.', 'error');
@@ -1643,20 +1539,24 @@
                 return;
             }
             
-            // Load tasks
-            allTasks = await fetchTasks();
-            const completedIds = await fetchCompletedTasks();
+            // Load tasks and ads in parallel
+            const [tasks, completedIds, ads] = await Promise.all([
+                fetchTasks(),
+                fetchCompletedTasks(),
+                fetchActiveAds()
+            ]);
+            
+            allTasks = tasks;
             completedTaskIds = new Set(completedIds);
+            activeAds = ads;
             
-            // Load ALL active ads (filtering out watched ones)
-            activeAds = await fetchActiveAds();
-            
-            // Render everything
+            // Render - will show "No Tasks or Ads Available" if both are empty
             renderTasks();
         }
         
-        // Start the app
         init();
     </script>
 </body>
 </html>
+
+                    
