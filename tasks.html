@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -826,15 +827,17 @@
         }
         
         function updateBalanceDisplay() {
-            if (currentUser) {
-                document.getElementById('userBalance').textContent = parseFloat(currentUser.balance).toFixed(8);
-                
-                if (currentUser.daily_streak > 0) {
-                    document.getElementById('streakDisplay').style.display = 'flex';
-                    document.getElementById('streakNumber').textContent = currentUser.daily_streak;
-                }
-            }
+    if (currentUser) {
+        const balance = parseFloat(currentUser.balance || 0);
+        document.getElementById('userBalance').textContent = balance.toFixed(8);
+        
+        if (currentUser.daily_streak > 0) {
+            document.getElementById('streakDisplay').style.display = 'flex';
+            document.getElementById('streakNumber').textContent = currentUser.daily_streak;
         }
+    }
+}
+
         
         // ============================================
         // DATABASE FUNCTIONS WITH ERROR HANDLING
@@ -1029,13 +1032,15 @@
         }
         
         function calculateDailyBonus(streakDays) {
-            const baseBonus = appSettings.daily_bonus || 1.00;
-            const multiplier = appSettings.streak_bonus_multiplier || 0.10;
-            const maxBonus = appSettings.max_streak_bonus || 5.00;
-            
-            const bonus = baseBonus + (streakDays * multiplier);
-            return Math.min(bonus, maxBonus);
-        }
+    const baseBonus = parseFloat(appSettings.daily_bonus || 1.00);
+    const multiplier = parseFloat(appSettings.streak_bonus_multiplier || 0.10);
+    const maxBonus = parseFloat(appSettings.max_streak_bonus || 5.00);
+    
+    const bonus = baseBonus + ((streakDays || 0) * multiplier);
+    return Math.min(bonus, maxBonus);
+}
+
+
         
         function canClaimDailyBonus() {
             if (!currentUser.last_daily_bonus) {
@@ -1280,7 +1285,7 @@
         
         function renderDailyBonusCard() {
             const bonusInfo = canClaimDailyBonus();
-            const reward = bonusInfo.bonus.toFixed(8);
+            const reward = parseFloat(bonusInfo.bonus || 0).toFixed(8);
             let buttonHtml = '';
             let description = '';
             
@@ -1333,7 +1338,7 @@
             if (activeAds.length === 0) return '';
             
             return activeAds.map(ad => {
-                const reward = parseFloat(ad.reward).toFixed(8);
+                const reward = parseFloat(ad.reward || 0).toFixed(8);
                 const description = ad.description || 'Watch an ad to earn rewards!';
                 const zoneId = (ad.zone_id || '').replace(/'/g, "\\'");
                 const sdkName = (ad.sdk_name || '').replace(/'/g, "\\'");
@@ -1397,7 +1402,7 @@
                         <p class="task-description">${task.description || 'Complete this task to earn rewards'}</p>
                         <div class="task-reward">
                             <i class="fa-solid fa-coins"></i>
-                            <span>+${parseFloat(task.reward).toFixed(8)} Perks</span>
+                            <span>+${parseFloat(task.reward || 0).toFixed(8)} Perks</span>
                         </div>
                     </div>
                     <div class="task-action">
