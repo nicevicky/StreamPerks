@@ -1301,7 +1301,7 @@
                 const hoursRemaining = Math.floor((tomorrow - new Date()) / (1000 * 60 * 60));
                 const minutesRemaining = Math.floor(((tomorrow - new Date()) / (1000 * 60)) % 60);
                 
-                description = `Come back in $${hoursRemaining}h$$ {minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
+                description = `Come back in ${hoursRemaining}h ${minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
                 buttonHtml = `
                     <button class="btn-task btn-claimed" disabled>
                         <i class="fa-solid fa-check"></i> Claimed
@@ -1335,8 +1335,8 @@
             return activeAds.map(ad => {
                 const reward = parseFloat(ad.reward).toFixed(8);
                 const description = ad.description || 'Watch an ad to earn rewards!';
-                const zoneId = ad.zone_id.replace(/'/g, "\\'");
-                const sdkName = ad.sdk_name.replace(/'/g, "\\'");
+                const zoneId = (ad.zone_id || '').replace(/'/g, "\\'");
+                const sdkName = (ad.sdk_name || '').replace(/'/g, "\\'");
                 
                 return `
                 <div class="task-card watch-ads" data-ad-id="${ad.id}">
@@ -1352,7 +1352,7 @@
                         </div>
                     </div>
                     <div class="task-action">
-                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd($${ad.id}, '$$ {zoneId}', '$${sdkName}',$$ {ad.reward}, this)">
+                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd(${ad.id}, '${zoneId}', '${sdkName}', ${ad.reward}, this)">
                             <i class="fa-solid fa-play"></i> Watch
                         </button>
                     </div>
@@ -1403,10 +1403,10 @@
                     <div class="task-action">
                         ${isCompleted ? 
                             '<button class="btn-task btn-completed" disabled><i class="fa-solid fa-check"></i> Done</button>' :
-                            `<button class="btn-task btn-start" onclick="startTask($${task.id}, '$$ {taskUrl}', '${taskType}', this)">
+                            `<button class="btn-task btn-start" onclick="startTask(${task.id}, '${taskUrl}', '${taskType}', this)">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Start
                             </button>
-                            <button class="btn-task btn-verify" onclick="verifyTask($${task.id}, '$$ {taskUrl}', '$${taskType}',$$ {task.reward}, this)" style="display: none;">
+                            <button class="btn-task btn-verify" onclick="verifyTask(${task.id}, '${taskUrl}', '${taskType}', ${task.reward}, this)" style="display: none;">
                                 <i class="fa-solid fa-circle-check"></i> Verify
                             </button>`
                         }
@@ -1415,7 +1415,7 @@
                 `;
             }).join('');
             
-            container.innerHTML = `<div class="tasks-grid">$${dailyBonusCardHtml}$$ {watchAdsCardsHtml}${tasksHTML}</div>`;
+            container.innerHTML = `<div class="tasks-grid">${dailyBonusCardHtml}${watchAdsCardsHtml}${tasksHTML}</div>`;
         }
         
         // ============================================
@@ -1627,5 +1627,5 @@
         
         init();
     </script>
-    </body>
+      </body>
 </html>
