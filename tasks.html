@@ -406,7 +406,7 @@
             box-shadow: 0 4px 15px var(--neon-cyan-glow);
         }
         
-        .btn-start:hover {
+        .btn-start:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px var(--neon-cyan-glow);
         }
@@ -417,7 +417,7 @@
             box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
         }
         
-        .btn-verify:hover, .btn-claim:hover {
+        .btn-verify:hover:not(:disabled), .btn-claim:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(251, 191, 36, 0.6);
         }
@@ -428,7 +428,7 @@
             box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);
         }
         
-        .btn-watch-ad:hover {
+        .btn-watch-ad:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(168, 85, 247, 0.6);
         }
@@ -449,14 +449,19 @@
         .btn-task:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none !important;
         }
         
         .btn-task.loading {
             position: relative;
-            color: transparent;
+            pointer-events: none;
         }
         
-        .btn-task.loading:after {
+        .btn-task.loading > * {
+            visibility: hidden;
+        }
+        
+        .btn-task.loading::after {
             content: '';
             position: absolute;
             width: 16px;
@@ -467,7 +472,9 @@
             animation: spin 0.8s linear infinite;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
+            margin-left: -8px;
+            margin-top: -8px;
+            visibility: visible;
         }
         
         .completed-badge {
@@ -686,6 +693,19 @@
         let activeAds = [];
         let watchedAdIds = new Set();
         let appSettings = {};
+        
+        // ============================================
+        // BUTTON STATE MANAGEMENT
+        // ============================================
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
         
         // ============================================
         // CHECK IF OPENED IN TELEGRAM
@@ -1255,7 +1275,7 @@
         }
         
         // ============================================
-        // RENDERING FUNCTIONS (FIXED TEMPLATE LITERALS)
+        // RENDERING FUNCTIONS (FIXED)
         // ============================================
         
         function renderDailyBonusCard() {
@@ -1281,7 +1301,7 @@
                 const hoursRemaining = Math.floor((tomorrow - new Date()) / (1000 * 60 * 60));
                 const minutesRemaining = Math.floor(((tomorrow - new Date()) / (1000 * 60)) % 60);
                 
-                description = `Come back in ${hoursRemaining}h ${minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
+                description = `Come back in $${hoursRemaining}h$$ {minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
                 buttonHtml = `
                     <button class="btn-task btn-claimed" disabled>
                         <i class="fa-solid fa-check"></i> Claimed
@@ -1332,7 +1352,7 @@
                         </div>
                     </div>
                     <div class="task-action">
-                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd(${ad.id}, '${zoneId}', '${sdkName}', ${ad.reward}, this)">
+                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd($${ad.id}, '$$ {zoneId}', '$${sdkName}',$$ {ad.reward}, this)">
                             <i class="fa-solid fa-play"></i> Watch
                         </button>
                     </div>
@@ -1364,6 +1384,7 @@
                 const cardClass = isCompleted ? 'task-card completed' : 'task-card';
                 const icon = task.icon || 'fa-tasks';
                 const taskUrl = (task.task_url || '').replace(/'/g, "\\'");
+                const taskType = (task.task_type || '').replace(/'/g, "\\'");
                 
                 return `
                 <div class="${cardClass}" data-task-id="${task.id}">
@@ -1382,10 +1403,10 @@
                     <div class="task-action">
                         ${isCompleted ? 
                             '<button class="btn-task btn-completed" disabled><i class="fa-solid fa-check"></i> Done</button>' :
-                            `<button class="btn-task btn-start" onclick="startTask(${task.id}, '${taskUrl}', '${task.task_type}')">
+                            `<button class="btn-task btn-start" onclick="startTask($${task.id}, '$$ {taskUrl}', '${taskType}', this)">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> Start
                             </button>
-                            <button class="btn-task btn-verify" onclick="verifyTask(${task.id}, '${taskUrl}', '${task.task_type}', ${task.reward})" style="display: none;">
+                            <button class="btn-task btn-verify" onclick="verifyTask($${task.id}, '$$ {taskUrl}', '$${taskType}',$$ {task.reward}, this)" style="display: none;">
                                 <i class="fa-solid fa-circle-check"></i> Verify
                             </button>`
                         }
@@ -1394,38 +1415,43 @@
                 `;
             }).join('');
             
-            container.innerHTML = `<div class="tasks-grid">${dailyBonusCardHtml}${watchAdsCardsHtml}${tasksHTML}</div>`;
+            container.innerHTML = `<div class="tasks-grid">$${dailyBonusCardHtml}$$ {watchAdsCardsHtml}${tasksHTML}</div>`;
         }
         
         // ============================================
-        // EVENT HANDLERS
+        // EVENT HANDLERS (FIXED WITH PROPER BUTTON STATE MANAGEMENT)
         // ============================================
         
         window.handleClaimBonus = async function(button) {
-            button.classList.add('loading');
-            button.disabled = true;
+            setButtonLoading(button, true);
             
-            const result = await claimDailyBonus();
-            
-            if (result.success) {
-                showMessage(result.message, 'success');
-                renderTasks();
-            } else {
-                showMessage(result.message || 'Failed to claim bonus. Please try again.', 'error');
-                button.classList.remove('loading');
-                button.disabled = false;
+            try {
+                const result = await claimDailyBonus();
+                
+                if (result.success) {
+                    showMessage(result.message, 'success');
+                    renderTasks();
+                } else {
+                    showMessage(result.message || 'Failed to claim bonus. Please try again.', 'error');
+                    setButtonLoading(button, false);
+                }
+            } catch (err) {
+                console.error('Error in handleClaimBonus:', err);
+                showMessage('An error occurred. Please try again.', 'error');
+                setButtonLoading(button, false);
             }
         }
         
         window.handleWatchAd = async function(adId, zoneId, sdkName, reward, button) {
-            button.classList.add('loading');
-            button.disabled = true;
+            setButtonLoading(button, true);
             
             try {
                 await loadAdSDK(zoneId, sdkName);
                 
                 if (typeof window[sdkName] === 'function') {
-                    window[sdkName]().then(async () => {
+                    try {
+                        await window[sdkName]();
+                        
                         const success = await recordAdWatch(adId, reward);
                         
                         if (success) {
@@ -1434,49 +1460,54 @@
                             renderTasks();
                         } else {
                             showMessage('Failed to record ad view. Please try again.', 'error');
-                            button.classList.remove('loading');
-                            button.disabled = false;
+                            setButtonLoading(button, false);
                         }
-                    }).catch((err) => {
-                        console.error('Ad display error:', err);
+                    } catch (adErr) {
+                        console.error('Ad display error:', adErr);
                         showMessage('Failed to load ad. Try again.', 'error');
-                        button.classList.remove('loading');
-                        button.disabled = false;
-                    });
+                        setButtonLoading(button, false);
+                    }
                 } else {
                     throw new Error('Ad SDK function not available');
                 }
             } catch (err) {
                 console.error('Error loading ad:', err);
                 showMessage('Failed to load ad. Please try again.', 'error');
-                button.classList.remove('loading');
-                button.disabled = false;
+                setButtonLoading(button, false);
             }
         }
         
-        window.startTask = function(taskId, link, taskType) {
+        window.startTask = function(taskId, link, taskType, button) {
             const card = document.querySelector(`[data-task-id="${taskId}"]`);
             const startBtn = card.querySelector('.btn-start');
             const verifyBtn = card.querySelector('.btn-verify');
             
-            if (taskType === 'join_channel' || taskType === 'join_group' || taskType === 'social') {
-                tg.openTelegramLink(link);
-            } else {
-                tg.openLink(link);
-            }
+            setButtonLoading(startBtn, true);
             
-            setTimeout(() => {
-                startBtn.style.display = 'none';
-                verifyBtn.style.display = 'flex';
-            }, 2000);
+            try {
+                if (taskType === 'join_channel' || taskType === 'join_group' || taskType === 'social') {
+                    tg.openTelegramLink(link);
+                } else {
+                    tg.openLink(link);
+                }
+                
+                setTimeout(() => {
+                    setButtonLoading(startBtn, false);
+                    startBtn.style.display = 'none';
+                    verifyBtn.style.display = 'flex';
+                }, 2000);
+            } catch (err) {
+                console.error('Error starting task:', err);
+                showMessage('Failed to open link. Please try again.', 'error');
+                setButtonLoading(startBtn, false);
+            }
         };
         
-        window.verifyTask = async function(taskId, link, taskType, reward) {
+        window.verifyTask = async function(taskId, link, taskType, reward, button) {
             const card = document.querySelector(`[data-task-id="${taskId}"]`);
             const verifyBtn = card.querySelector('.btn-verify');
             
-            verifyBtn.classList.add('loading');
-            verifyBtn.disabled = true;
+            setButtonLoading(verifyBtn, true);
             
             try {
                 let verified = false;
@@ -1486,8 +1517,7 @@
                     
                     if (!extracted) {
                         showMessage('Invalid Telegram link format.', 'error');
-                        verifyBtn.classList.remove('loading');
-                        verifyBtn.disabled = false;
+                        setButtonLoading(verifyBtn, false);
                         return;
                     }
                     
@@ -1499,8 +1529,7 @@
                         
                         if (!botCheck.isAdmin) {
                             showMessage('Bot must be admin in the channel/group to verify.', 'error');
-                            verifyBtn.classList.remove('loading');
-                            verifyBtn.disabled = false;
+                            setButtonLoading(verifyBtn, false);
                             return;
                         }
                         
@@ -1509,8 +1538,7 @@
                         
                         if (!verified) {
                             showMessage('Please join the channel/group first!', 'error');
-                            verifyBtn.classList.remove('loading');
-                            verifyBtn.disabled = false;
+                            setButtonLoading(verifyBtn, false);
                             return;
                         }
                     } else {
@@ -1528,14 +1556,12 @@
                     renderTasks();
                 } else {
                     showMessage('Failed to complete task. Please try again.', 'error');
-                    verifyBtn.classList.remove('loading');
-                    verifyBtn.disabled = false;
+                    setButtonLoading(verifyBtn, false);
                 }
             } catch (err) {
                 console.error('Error verifying task:', err);
                 showMessage('An error occurred. Please try again.', 'error');
-                verifyBtn.classList.remove('loading');
-                verifyBtn.disabled = false;
+                setButtonLoading(verifyBtn, false);
             }
         };
         
