@@ -579,467 +579,521 @@
     </nav>
 
     <script>
-        // ==========================================
-        // CONFIGURATION - REPLACE WITH YOUR VALUES
-        // ==========================================
-        const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
-        const TELEGRAM_BOT_USERNAME = 'StreamPerksBot'; // Without @
-        
-        // Initialize Supabase
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
-        // Initialize Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+    // ==========================================
+    // CONFIGURATION - REPLACE WITH YOUR VALUES
+    // ==========================================
+    const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
+    const TELEGRAM_BOT_USERNAME = 'StreamPerksBot'; // Without @
+    
+    // Initialize Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Initialize Telegram WebApp
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand();
 
-        let currentUser = null;
-        let dailyBonus = 0;
+    let currentUser = null;
+    let referralBonus = 0;
 
-        // ==========================================
-        // INITIALIZATION
-        // ==========================================
-        document.addEventListener('DOMContentLoaded', async () => {
-            if (TELEGRAM_BOT_USERNAME === 'YOUR_BOT_USERNAME') {
-                showMessage('App configuration error. Please contact support.', 'error');
-                console.error('CRITICAL: Bot username not configured');
+    // ==========================================
+    // INITIALIZATION
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (TELEGRAM_BOT_USERNAME === 'YOUR_BOT_USERNAME') {
+            showMessage('App configuration error. Please contact support.', 'error');
+            console.error('CRITICAL: Bot username not configured');
+            return;
+        }
+
+        await initializeUser();
+        await loadReferralBonusSettings();
+        generateInviteLink();
+        await loadReferredUsers();
+    });
+
+    // ==========================================
+    // USER INITIALIZATION
+    // ==========================================
+    async function initializeUser() {
+        try {
+            const user = tg.initDataUnsafe?.user;
+            
+            if (!user) {
+                showMessage('Please open this app from Telegram', 'error');
+                return;
+            }
+            
+            currentUser = user;
+            
+            // Check if user exists
+            const { data: existingUser, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('telegram_id', user.id)
+                .single();
+
+            if (error && error.code !== 'PGRST116') {
+                console.error('Error fetching user:', error);
                 return;
             }
 
-            await initializeUser();
-            await loadDailyBonusSettings();
-            generateInviteLink();
-            await loadReferredUsers();
-            
-            if (currentUser) {
-                await checkForReferrer();
-            }
-        });
-
-        // ==========================================
-        // USER INITIALIZATION
-        // ==========================================
-        async function initializeUser() {
-            try {
-                const user = tg.initDataUnsafe?.user;
-                
-                if (!user) {
-                    showMessage('Please open this app from Telegram', 'error');
-                    return;
+            if (!existingUser) {
+                // Create new user and check for referrer
+                const newUser = await createUser(user);
+                if (newUser) {
+                    await checkForReferrer(newUser);
+                    // Reload user data after referral processing
+                    const { data: updatedUser } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('telegram_id', user.id)
+                        .single();
+                    updateStatsDisplay(updatedUser || newUser);
                 }
-                
-                currentUser = user;
-                
-                const { data: existingUser, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('telegram_id', user.id)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') {
-                    console.error('Error fetching user:', error);
-                    return;
-                }
-
-                if (!existingUser) {
-                    const newUser = await createUser(user);
-                    if (newUser) {
-                        updateStatsDisplay(newUser);
-                    }
-                } else {
-                    updateStatsDisplay(existingUser);
-                }
-            } catch (error) {
-                console.error('Error initializing user:', error);
-                showMessage('Failed to initialize user', 'error');
-            }
-        }
-
-        // ==========================================
-        // CREATE NEW USER
-        // ==========================================
-        async function createUser(user) {
-            try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .insert([{
-                        telegram_id: user.id,
-                        username: user.username || null,
-                        first_name: user.first_name || 'User',
-                        last_name: user.last_name || null,
-                        photo_url: user.photo_url || null,
-                        balance: 0,
-                        referral_count: 0,
-                        total_earned: 0
-                    }])
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                return data;
-            } catch (error) {
-                console.error('Error creating user:', error);
-                return null;
-            }
-        }
-
-        // ==========================================
-        // LOAD DAILY BONUS SETTINGS
-        // ==========================================
-        async function loadDailyBonusSettings() {
-            try {
-                const { data, error } = await supabase
-                    .from('settings')
-                    .select('setting_value')
-                    .eq('setting_key', 'daily_bonus')
-                    .single();
-
-                if (error) throw error;
-                
-                dailyBonus = parseFloat(data.setting_value) || 1;
-                document.getElementById('bonusBadge').innerHTML = 
-                    `<i class="fas fa-star"></i> Earn ${dailyBonus} Perks per referral!`;
-            } catch (error) {
-                console.error('Error loading daily bonus settings:', error);
-                dailyBonus = 1;
-                document.getElementById('bonusBadge').innerHTML = 
-                    `<i class="fas fa-star"></i> Earn ${dailyBonus} Perks per referral!`;
-            }
-        }
-
-        // ==========================================
-        // GENERATE INVITE LINK
-        // ==========================================
-        function generateInviteLink() {
-            if (!currentUser) return;
-            
-            const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/Perks?startapp=${currentUser.id}`;
-            document.getElementById('inviteLink').textContent = inviteLink;
-        }
-
-        // ==========================================
-        // COPY INVITE LINK
-        // ==========================================
-        async function copyInviteLink() {
-            const inviteLink = document.getElementById('inviteLink').textContent;
-            if (inviteLink === 'Loading...') return;
-
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    await navigator.clipboard.writeText(inviteLink);
-                } else {
-                    const textArea = document.createElement('textarea');
-                    textArea.value = inviteLink;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-999999px';
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                }
-
-                showMessage('Invite link copied to clipboard!', 'success');
-                
-                if (tg.HapticFeedback) {
-                    tg.HapticFeedback.notificationOccurred('success');
-                }
-            } catch (error) {
-                console.error('Error copying to clipboard:', error);
-                showMessage('Failed to copy link', 'error');
-            }
-        }
-
-        // ==========================================
-        // SHARE INVITE LINK
-        // ==========================================
-        function shareInviteLink() {
-            const inviteLink = document.getElementById('inviteLink').textContent;
-            if (inviteLink === 'Loading...') return;
-
-            const shareText = `Join me on StreamPerks and start earning rewards by watching ads!\n\nGet bonus Perks when you sign up!\n\n${inviteLink}`;
-
-            if (tg.openTelegramLink) {
-                tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
             } else {
-                window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`, '_blank');
+                updateStatsDisplay(existingUser);
+            }
+        } catch (error) {
+            console.error('Error initializing user:', error);
+            showMessage('Failed to initialize user', 'error');
+        }
+    }
+
+    // ==========================================
+    // CREATE NEW USER
+    // ==========================================
+    async function createUser(user) {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .insert([{
+                    telegram_id: user.id,
+                    username: user.username || null,
+                    first_name: user.first_name || 'User',
+                    last_name: user.last_name || null,
+                    photo_url: user.photo_url || null,
+                    balance: 0,
+                    referral_count: 0,
+                    total_earned: 0,
+                    referrer_id: null
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            console.log('New user created:', data);
+            return data;
+        } catch (error) {
+            console.error('Error creating user:', error);
+            return null;
+        }
+    }
+
+    // ==========================================
+    // LOAD REFERRAL BONUS SETTINGS
+    // ==========================================
+    async function loadReferralBonusSettings() {
+        try {
+            const { data, error } = await supabase
+                .from('settings')
+                .select('setting_value')
+                .eq('setting_key', 'referral_bonus')
+                .single();
+
+            if (error) {
+                console.error('Error loading referral bonus:', error);
+                referralBonus = 5; // Default fallback
+            } else {
+                referralBonus = parseFloat(data.setting_value) || 5;
+            }
+            
+            document.getElementById('bonusBadge').innerHTML = 
+                `<i class="fas fa-star"></i> Earn ${referralBonus} Perks per referral!`;
+        } catch (error) {
+            console.error('Error loading referral bonus settings:', error);
+            referralBonus = 5;
+            document.getElementById('bonusBadge').innerHTML = 
+                `<i class="fas fa-star"></i> Earn ${referralBonus} Perks per referral!`;
+        }
+    }
+
+    // ==========================================
+    // GENERATE INVITE LINK
+    // ==========================================
+    function generateInviteLink() {
+        if (!currentUser) return;
+        
+        const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/app?startapp=${currentUser.id}`;
+        document.getElementById('inviteLink').textContent = inviteLink;
+    }
+
+    // ==========================================
+    // COPY INVITE LINK
+    // ==========================================
+    async function copyInviteLink() {
+        const inviteLink = document.getElementById('inviteLink').textContent;
+        if (inviteLink === 'Loading...') return;
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(inviteLink);
+            } else {
+                const textArea = document.createElement('textarea');
+                textArea.value = inviteLink;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
             }
 
+            showMessage('Invite link copied to clipboard!', 'success');
+            
             if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('medium');
+                tg.HapticFeedback.notificationOccurred('success');
             }
+        } catch (error) {
+            console.error('Error copying to clipboard:', error);
+            showMessage('Failed to copy link', 'error');
+        }
+    }
+
+    // ==========================================
+    // SHARE INVITE LINK
+    // ==========================================
+    function shareInviteLink() {
+        const inviteLink = document.getElementById('inviteLink').textContent;
+        if (inviteLink === 'Loading...') return;
+
+        const shareText = `Join me on StreamPerks and start earning rewards by watching ads!\n\nGet ${referralBonus} bonus Perks when you sign up!\n\n${inviteLink}`;
+
+        if (tg.openTelegramLink) {
+            tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
+        } else {
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`, '_blank');
         }
 
-        // ==========================================
-        // CHECK FOR REFERRER
-        // ==========================================
-        async function checkForReferrer() {
-            try {
-                const startParam = tg.initDataUnsafe?.start_param;
-                
-                if (!startParam || !currentUser) return;
-
-                const referrerId = parseInt(startParam);
-                
-                if (referrerId === currentUser.id) return;
-
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('referrer_id')
-                    .eq('telegram_id', currentUser.id)
-                    .single();
-
-                if (userError) throw userError;
-                
-                if (userData.referrer_id) return;
-
-                await processReferral(referrerId);
-            } catch (error) {
-                console.error('Error checking referrer:', error);
-            }
+        if (tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('medium');
         }
+    }
 
-        // ==========================================
-        // PROCESS REFERRAL
-        // ==========================================
-        async function processReferral(referrerId) {
-            try {
-                await supabase
-                    .from('users')
-                    .update({ referrer_id: referrerId })
-                    .eq('telegram_id', currentUser.id);
-
-                const { data: referrer, error: referrerError } = await supabase
-                    .from('users')
-                    .select('balance, referral_count, total_earned')
-                    .eq('telegram_id', referrerId)
-                    .single();
-
-                if (referrerError) throw referrerError;
-
-                await supabase
-                    .from('users')
-                    .update({
-                        balance: (referrer.balance || 0) + dailyBonus,
-                        referral_count: (referrer.referral_count || 0) + 1,
-                        total_earned: (referrer.total_earned || 0) + dailyBonus
-                    })
-                    .eq('telegram_id', referrerId);
-
-                await supabase
-                    .from('transactions')
-                    .insert([{
-                        user_id: referrerId,
-                        type: 'referral_bonus',
-                        amount: dailyBonus,
-                        description: `Referral bonus from user ${currentUser.id}`
-                    }]);
-
-                const { data: newUser, error: newUserError } = await supabase
-                    .from('users')
-                    .select('balance, total_earned')
-                    .eq('telegram_id', currentUser.id)
-                    .single();
-
-                if (newUserError) throw newUserError;
-
-                await supabase
-                    .from('users')
-                    .update({
-                        balance: (newUser.balance || 0) + dailyBonus,
-                        total_earned: (newUser.total_earned || 0) + dailyBonus
-                    })
-                    .eq('telegram_id', currentUser.id);
-
-                await supabase
-                    .from('transactions')
-                    .insert([{
-                        user_id: currentUser.id,
-                        type: 'referral_bonus',
-                        amount: dailyBonus,
-                        description: 'Welcome bonus for joining via referral'
-                    }]);
-
-                showMessage(`Welcome! You earned ${dailyBonus} Perks!`, 'success');
-
-            } catch (error) {
-                console.error('Error processing referral:', error);
-            }
-        }
-
-        // ==========================================
-        // LOAD REFERRED USERS
-        // ==========================================
-        async function loadReferredUsers() {
-            try {
-                if (!currentUser) return;
-
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('telegram_id, username, first_name, last_name, photo_url, created_at')
-                    .eq('referrer_id', currentUser.id)
-                    .order('created_at', { ascending: false });
-
-                if (error) throw error;
-
-                displayReferredUsers(data);
-            } catch (error) {
-                console.error('Error loading referred users:', error);
-                document.getElementById('referredUsersContainer').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <h3>Error Loading Referrals</h3>
-                        <p>Please try again later</p>
-                    </div>
-                `;
-            }
-        }
-
-        // ==========================================
-        // DISPLAY REFERRED USERS
-        // ==========================================
-        function displayReferredUsers(users) {
-            const container = document.getElementById('referredUsersContainer');
-
-            if (!users || users.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-user-friends"></i>
-                        <h3>No Referrals Yet</h3>
-                        <p>Share your invite link to start earning!</p>
-                    </div>
-                `;
+    // ==========================================
+    // CHECK FOR REFERRER
+    // ==========================================
+    async function checkForReferrer(userData) {
+        try {
+            const startParam = tg.initDataUnsafe?.start_param;
+            
+            console.log('Checking referrer - startParam:', startParam);
+            
+            if (!startParam || !currentUser) {
+                console.log('No start param or current user');
                 return;
             }
 
-            let html = '<div class="user-list">';
-            users.forEach(user => {
-                const displayName = user.first_name || user.username || 'User';
-                const initial = displayName.charAt(0).toUpperCase();
-                const joinDate = formatDate(user.created_at);
-
-                html += `
-                    <div class="user-item">
-                        <div class="user-avatar">
-                            ${user.photo_url ? 
-                                `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}">` : 
-                                `<span>${escapeHtml(initial)}</span>`
-                            }
-                        </div>
-                        <div class="user-info">
-                            <div class="user-name">${escapeHtml(displayName)}</div>
-                            <div class="user-date">Joined ${joinDate}</div>
-                        </div>
-                        <div class="user-bonus">
-                            <i class="fas fa-coins"></i>
-                            +${dailyBonus}
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        // ==========================================
-        // UPDATE STATS DISPLAY
-        // ==========================================
-        function updateStatsDisplay(userData) {
-            document.getElementById('referralCount').textContent = userData.referral_count || 0;
+            const referrerId = parseInt(startParam);
             
-            const totalBonus = (userData.referral_count || 0) * dailyBonus;
-            document.getElementById('totalBonus').textContent = totalBonus;
-        }
-
-        // ==========================================
-        // SHOW MESSAGE
-        // ==========================================
-        function showMessage(text, type = 'success') {
-            const container = document.getElementById('messageContainer');
-            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            console.log('Referrer ID:', referrerId, 'Current User ID:', currentUser.id);
             
-            container.innerHTML = `
-                <div class="message ${type}">
-                    <i class="fas ${icon}"></i>
-                    <span>${text}</span>
+            // Don't allow self-referral
+            if (referrerId === currentUser.id) {
+                console.log('Self-referral attempt blocked');
+                return;
+            }
+
+            // Check if user already has a referrer
+            if (userData.referrer_id) {
+                console.log('User already has a referrer:', userData.referrer_id);
+                return;
+            }
+
+            // Verify referrer exists
+            const { data: referrerData, error: referrerCheckError } = await supabase
+                .from('users')
+                .select('telegram_id, balance, referral_count, total_earned')
+                .eq('telegram_id', referrerId)
+                .single();
+
+            if (referrerCheckError || !referrerData) {
+                console.error('Referrer not found:', referrerCheckError);
+                return;
+            }
+
+            console.log('Processing referral for referrer:', referrerData);
+
+            // Process the referral
+            await processReferral(referrerId, referrerData);
+        } catch (error) {
+            console.error('Error checking referrer:', error);
+        }
+    }
+
+    // ==========================================
+    // PROCESS REFERRAL
+    // ==========================================
+    async function processReferral(referrerId, referrerData) {
+        try {
+            console.log('Processing referral - Referrer ID:', referrerId);
+
+            // 1. Update new user with referrer_id
+            const { error: updateNewUserError } = await supabase
+                .from('users')
+                .update({ 
+                    referrer_id: referrerId,
+                    balance: referralBonus,
+                    total_earned: referralBonus
+                })
+                .eq('telegram_id', currentUser.id);
+
+            if (updateNewUserError) {
+                console.error('Error updating new user:', updateNewUserError);
+                throw updateNewUserError;
+            }
+
+            // 2. Update referrer's stats
+            const newReferrerBalance = (referrerData.balance || 0) + referralBonus;
+            const newReferralCount = (referrerData.referral_count || 0) + 1;
+            const newTotalEarned = (referrerData.total_earned || 0) + referralBonus;
+
+            const { error: updateReferrerError } = await supabase
+                .from('users')
+                .update({
+                    balance: newReferrerBalance,
+                    referral_count: newReferralCount,
+                    total_earned: newTotalEarned
+                })
+                .eq('telegram_id', referrerId);
+
+            if (updateReferrerError) {
+                console.error('Error updating referrer:', updateReferrerError);
+                throw updateReferrerError;
+            }
+
+            // 3. Create transaction for referrer
+            const { error: referrerTxError } = await supabase
+                .from('transactions')
+                .insert([{
+                    user_id: referrerId,
+                    type: 'referral_bonus',
+                    amount: referralBonus,
+                    description: `Referral bonus from ${currentUser.first_name || currentUser.username || 'user'}`
+                }]);
+
+            if (referrerTxError) {
+                console.error('Error creating referrer transaction:', referrerTxError);
+            }
+
+            // 4. Create transaction for new user
+            const { error: newUserTxError } = await supabase
+                .from('transactions')
+                .insert([{
+                    user_id: currentUser.id,
+                    type: 'referral_bonus',
+                    amount: referralBonus,
+                    description: 'Welcome bonus for joining via referral'
+                }]);
+
+            if (newUserTxError) {
+                console.error('Error creating new user transaction:', newUserTxError);
+            }
+
+            console.log('Referral processed successfully!');
+            showMessage(`Welcome! You and your friend both earned ${referralBonus} Perks!`, 'success');
+
+        } catch (error) {
+            console.error('Error processing referral:', error);
+            showMessage('Error processing referral bonus', 'error');
+        }
+    }
+
+    // ==========================================
+    // LOAD REFERRED USERS
+    // ==========================================
+    async function loadReferredUsers() {
+        try {
+            if (!currentUser) {
+                console.log('No current user');
+                return;
+            }
+
+            console.log('Loading referrals for user:', currentUser.id);
+
+            // Query users where referrer_id matches current user's telegram_id
+            const { data, error } = await supabase
+                .from('users')
+                .select('telegram_id, username, first_name, last_name, photo_url, created_at')
+                .eq('referrer_id', currentUser.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error loading referred users:', error);
+                throw error;
+            }
+
+            console.log('Referred users loaded:', data?.length || 0);
+            displayReferredUsers(data || []);
+        } catch (error) {
+            console.error('Error loading referred users:', error);
+            document.getElementById('referredUsersContainer').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Error Loading Referrals</h3>
+                    <p>Please try again later</p>
                 </div>
             `;
+        }
+    }
 
-            setTimeout(() => {
-                container.innerHTML = '';
-            }, 5000);
+    // ==========================================
+    // DISPLAY REFERRED USERS
+    // ==========================================
+    function displayReferredUsers(users) {
+        const container = document.getElementById('referredUsersContainer');
+
+        if (!users || users.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-user-friends"></i>
+                    <h3>No Referrals Yet</h3>
+                    <p>Share your invite link to start earning!</p>
+                </div>
+            `;
+            return;
         }
 
-        // ==========================================
-        // FORMAT DATE
-        // ==========================================
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffTime = Math.abs(now - date);
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        let html = '<div class="user-list">';
+        users.forEach(user => {
+            const displayName = user.first_name || user.username || 'User';
+            const initial = displayName.charAt(0).toUpperCase();
+            const joinDate = formatDate(user.created_at);
 
-            if (diffDays === 0) {
-                const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-                if (diffHours === 0) {
-                    const diffMinutes = Math.floor(diffTime / (1000 * 60));
-                    return `${diffMinutes} min${diffMinutes !== 1 ? 's' : ''} ago`;
-                }
-                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-            } else if (diffDays === 1) {
-                return 'Yesterday';
-            } else if (diffDays < 7) {
-                return `${diffDays} days ago`;
-            } else if (diffDays < 30) {
-                const weeks = Math.floor(diffDays / 7);
-                return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
-            } else if (diffDays < 365) {
-                const months = Math.floor(diffDays / 30);
-                return `${months} month${months !== 1 ? 's' : ''} ago`;
-            } else {
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
+            html += `
+                <div class="user-item">
+                    <div class="user-avatar">
+                        ${user.photo_url ? 
+                            `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}">` : 
+                            `<span>${escapeHtml(initial)}</span>`
+                        }
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">${escapeHtml(displayName)}</div>
+                        <div class="user-date">Joined ${joinDate}</div>
+                    </div>
+                    <div class="user-bonus">
+                        <i class="fas fa-coins"></i>
+                        +${referralBonus}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // ==========================================
+    // UPDATE STATS DISPLAY
+    // ==========================================
+    function updateStatsDisplay(userData) {
+        const referralCount = userData.referral_count || 0;
+        document.getElementById('referralCount').textContent = referralCount;
+        
+        const totalBonus = referralCount * referralBonus;
+        document.getElementById('totalBonus').textContent = totalBonus;
+    }
+
+    // ==========================================
+    // SHOW MESSAGE
+    // ==========================================
+    function showMessage(text, type = 'success') {
+        const container = document.getElementById('messageContainer');
+        const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+        
+        container.innerHTML = `
+            <div class="message ${type}">
+                <i class="fas ${icon}"></i>
+                <span>${text}</span>
+            </div>
+        `;
+
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 5000);
+    }
+
+    // ==========================================
+    // FORMAT DATE
+    // ==========================================
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) {
+            const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+            if (diffHours === 0) {
+                const diffMinutes = Math.floor(diffTime / (1000 * 60));
+                return `$${diffMinutes} min$$ {diffMinutes !== 1 ? 's' : ''} ago`;
             }
+            return `$${diffHours} hour$$ {diffHours !== 1 ? 's' : ''} ago`;
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return `${diffDays} days ago`;
+        } else if (diffDays < 30) {
+            const weeks = Math.floor(diffDays / 7);
+            return `$${weeks} week$$ {weeks !== 1 ? 's' : ''} ago`;
+        } else if (diffDays < 365) {
+            const months = Math.floor(diffDays / 30);
+            return `$${months} month$$ {months !== 1 ? 's' : ''} ago`;
+        } else {
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
         }
+    }
 
-        // ==========================================
-        // ESCAPE HTML (XSS Prevention)
-        // ==========================================
-        function escapeHtml(text) {
-            if (typeof text !== 'string') return '';
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#x27;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
+    // ==========================================
+    // ESCAPE HTML (XSS Prevention)
+    // ==========================================
+    function escapeHtml(text) {
+        if (typeof text !== 'string') return '';
+        const map = {
+            '&': '&',
+            '<': '<',
+            '>': '>',
+            '"': '"',
+            "'": '''
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
 
-        // ==========================================
-        // REFRESH DATA PERIODICALLY
-        // ==========================================
-        setInterval(async () => {
-            if (currentUser) {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('referral_count, balance')
-                    .eq('telegram_id', currentUser.id)
-                    .single();
+    // ==========================================
+    // REFRESH DATA PERIODICALLY
+    // ==========================================
+    setInterval(async () => {
+        if (currentUser) {
+            const { data, error } = await supabase
+                .from('users')
+                .select('referral_count, balance')
+                .eq('telegram_id', currentUser.id)
+                .single();
 
-                if (!error && data) {
-                    await loadDailyBonusSettings();
-                    updateStatsDisplay(data);
-                }
-
-                await loadReferredUsers();
+            if (!error && data) {
+                updateStatsDisplay(data);
             }
-        }, 30000);
-    </script>
+
+            await loadReferredUsers();
+        }
+    }, 30000); // Refresh every 30 seconds
+</script>
+
 </body>
 </html>
 
