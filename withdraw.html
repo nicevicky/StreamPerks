@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Withdraw - StreamPerks</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        :root {
+            --bg-dark: #0a0a0f;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-cyan: #00f2ff;
+            --neon-cyan-glow: rgba(0, 242, 255, 0.5);
+            --neon-green: #10b981;
+            --neon-green-glow: rgba(16, 185, 129, 0.5);
+            --text-primary: #ffffff;
+            --text-secondary: #b4b4b4;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --success-color: #10b981;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 242, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(50px, 50px) rotate(120deg); }
+            66% { transform: translate(-50px, 100px) rotate(240deg); }
+        }
+        .header {
+            padding: 20px 20px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px var(--neon-cyan-glow);
+            letter-spacing: 1px;
+        }
+        .container {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .balance-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 242, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        .balance-header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 2;
+        }
+        .balance-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .balance-amount {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            animation: balanceGlow 2s ease-in-out infinite;
+        }
+        @keyframes balanceGlow {
+            0%, 100% { filter: drop-shadow(0 0 10px var(--neon-cyan-glow)); }
+            50% { filter: drop-shadow(0 0 20px var(--neon-cyan-glow)); }
+        }
+        .balance-currency {
+            font-size: 18px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+            margin: 20px 0;
+            position: relative;
+            z-index: 2;
+        }
+        .usdt-balance {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+            border-radius: 16px;
+            padding: 15px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+        .usdt-icon {
+            color: var(--neon-green);
+            font-size: 24px;
+            filter: drop-shadow(0 0 10px var(--neon-green-glow));
+        }
+        .usdt-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--neon-green);
+        }
+        .usdt-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .withdrawal-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+        }
+        .card-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-title i {
+            color: var(--neon-cyan);
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px var(--neon-cyan-glow);
+        }
+        .form-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+        .amount-helper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .min-withdrawal {
+            color: var(--warning-color);
+        }
+        .usdt-equivalent {
+            color: var(--neon-green);
+            font-weight: 600;
+        }
+        .quick-amounts {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .quick-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .quick-btn:hover, .quick-btn.active {
+            background: rgba(0, 242, 255, 0.15);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 15px var(--neon-cyan-glow);
+        }
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
+            border: none;
+            border-radius: 16px;
+            padding: 18px;
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .submit-btn:active::before {
+            width: 400px;
+            height: 400px;
+        }
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px var(--neon-cyan-glow);
+        }
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .history-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .history-toggle:hover {
+            border-color: var(--neon-cyan);
+            box-shadow: 0 0 20px var(--neon-cyan-glow);
+        }
+        .history-toggle i {
+            transition: transform 0.3s ease;
+        }
+        .history-toggle.active i {
+            transform: rotate(180deg);
+        }
+        .history-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        .history-section.show {
+            max-height: 2000px;
+        }
+        .history-item {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .history-item:hover {
+            transform: translateX(5px);
+            border-color: var(--neon-cyan);
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .history-crypto {
+            font-weight: 700;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-pending {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning-color);
+            border: 1px solid var(--warning-color);
+        }
+        .status-approved {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+        .status-rejected {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+        }
+        .history-details {
+            display: grid;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-secondary);
+        }
+        .detail-label {
+            font-weight: 500;
+        }
+        .detail-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            word-break: break-all;
+        }
+        .wallet-address {
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .no-history {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        .no-history i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        .alert {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+        .alert-info {
+            border-left: 3px solid var(--neon-cyan);
+        }
+        .alert-warning {
+            border-left: 3px solid var(--warning-color);
+        }
+        .alert-error {
+            border-left: 3px solid var(--error-color);
+        }
+        .alert-success {
+            border-left: 3px solid var(--success-color);
+        }
+        .alert i {
+            font-size: 20px;
+            margin-top: 2px;
+        }
+        .alert-info i { color: var(--neon-cyan); }
+        .alert-warning i { color: var(--warning-color); }
+        .alert-error i { color: var(--error-color); }
+        .alert-success i { color: var(--success-color); }
+        .alert-content {
+            flex: 1;
+        }
+        .alert-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .alert-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--glass-border);
+            padding: 12px 20px 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+        }
+        .nav-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 12px 8px;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-decoration: none;
+            color: var(--text-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--neon-cyan-glow), transparent);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .nav-btn:active::before {
+            width: 200px;
+            height: 200px;
+        }
+        .nav-btn:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 8px 25px var(--neon-cyan-glow);
+        }
+        .nav-btn.active {
+            background: rgba(0, 242, 255, 0.15);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 25px var(--neon-cyan-glow), inset 0 0 20px rgba(0, 242, 255, 0.1);
+            transform: translateY(-5px);
+        }
+        .nav-icon {
+            font-size: 22px;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        .nav-btn.active .nav-icon {
+            animation: iconBounce 0.6s ease;
+        }
+        @keyframes iconBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .nav-label {
+            font-size: 11px;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--glass-border);
+            border-top-color: var(--neon-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .hidden {
+            display: none !important;
+        }
+        @media (max-width: 380px) {
+            .balance-amount { font-size: 40px; }
+            .quick-amounts { grid-template-columns: repeat(2, 1fr); }
+            .nav-btn { padding: 10px 5px; margin: 0 3px; }
+            .nav-icon { font-size: 20px; }
+            .nav-label { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <div class="header">
+        <div class="logo">StreamPerks</div>
+    </div>
+
+    <div id="loadingScreen" class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading your wallet...</div>
+    </div>
+
+    <div id="mainContent" class="container hidden">
+        <!-- Balance Card -->
+        <div class="balance-card">
+            <div class="balance-header">
+                <div class="balance-label">Your Balance</div>
+                <div class="balance-amount" id="perksBalance">0</div>
+                <div class="balance-currency">PERKS</div>
+            </div>
+            <div class="divider"></div>
+            <div class="usdt-balance">
+                <i class="fa-solid fa-dollar-sign usdt-icon"></i>
+                <div>
+                    <div class="usdt-value" id="usdtBalance">0.00</div>
+                    <div class="usdt-label">USDT Equivalent</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Value Input (Hidden by default) -->
+        <div id="settingsSection" class="withdrawal-card hidden">
+            <div class="card-title">
+                <i class="fas fa-cog"></i>
+                Admin Settings
+            </div>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <div class="alert-content">
+                    <div class="alert-title">Conversion Rate</div>
+                    <div class="alert-message">Set the value of 1 PERK in USDT</div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">1 PERK = ? USDT</label>
+                <input type="number" step="0.00001" class="form-input" id="perkValueInput" placeholder="0.0001">
+            </div>
+            <button class="submit-btn" onclick="savePerkValue()">
+                <i class="fas fa-save"></i> Save Conversion Rate
+            </button>
+        </div>
+
+        <!-- Withdrawal Form -->
+        <div class="withdrawal-card">
+            <div class="card-title">
+                <i class="fas fa-money-bill-transfer"></i>
+                Withdraw Funds
+            </div>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <div class="alert-content">
+                    <div class="alert-title">Withdrawal Information</div>
+                    <div class="alert-message">Minimum withdrawal: 10,000 PERKS (1 USDT). Processing time: 24-48 hours.</div>
+                </div>
+            </div>
+
+            <form id="withdrawalForm">
+                <div class="form-group">
+                    <label class="form-label">Cryptocurrency</label>
+                    <select class="form-select" id="crypto" required>
+                        <option value="">Select Cryptocurrency</option>
+                        <option value="USDT-TRC20">USDT (TRC20)</option>
+                        <option value="USDT-ERC20">USDT (ERC20)</option>
+                        <option value="USDT-BEP20">USDT (BEP20)</option>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                        <option value="ETH">Ethereum (ETH)</option>
+                        <option value="BNB">Binance Coin (BNB)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Amount (PERKS)</label>
+                    <input type="number" class="form-input" id="amount" placeholder="Enter amount" min="10000" step="1000" required>
+                    <div class="amount-helper">
+                        <span class="min-withdrawal">Min: 10,000 PERKS</span>
+                        <span class="usdt-equivalent" id="amountUSDT">≈ 0.00 USDT</span>
+                    </div>
+                    <div class="quick-amounts">
+                        <button type="button" class="quick-btn" onclick="setAmount(10000)">10K</button>
+                        <button type="button" class="quick-btn" onclick="setAmount(50000)">50K</button>
+                        <button type="button" class="quick-btn" onclick="setAmount(100000)">100K</button>
+                        <button type="button" class="quick-btn" onclick="setAmount('max')">MAX</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Wallet Address</label>
+                    <input type="text" class="form-input" id="walletAddress" placeholder="Enter your wallet address" required>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <i class="fas fa-paper-plane"></i> Submit Withdrawal
+                </button>
+            </form>
+        </div>
+
+        <!-- History Toggle Button -->
+        <div class="history-toggle" onclick="toggleHistory()">
+            <i class="fas fa-history"></i>
+            <span>Withdrawal History</span>
+            <i class="fas fa-chevron-down"></i>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section" id="historySection">
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-btn">
+            <i class="fas fa-house nav-icon"></i>
+            <span class="nav-label">Home</span>
+        </a>
+        <a href="tasks.html" class="nav-btn">
+            <i class="fas fa-list-check nav-icon"></i>
+            <span class="nav-label">Tasks</span>
+        </a>
+        <a href="withdraw.html" class="nav-btn active">
+            <i class="fas fa-wallet nav-icon"></i>
+            <span class="nav-label">Withdraw</span>
+        </a>
+        <a href="invite.html" class="nav-btn">
+            <i class="fas fa-user-group nav-icon"></i>
+            <span class="nav-label">Invite</span>
+        </a>
+    </nav>
+
+    <script>
+        // ============================================
+        // CONFIGURATION - ADD YOUR CREDENTIALS HERE
+        // ============================================
+        const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
+
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Global variables
+        let currentUser = null;
+        let perkValue = 0.0001; // Default: 1 PERK = 0.0001 USDT
+        let userBalance = 0;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        async function init() {
+            try {
+                // Get Telegram user data
+                const telegramUser = tg.initDataUnsafe?.user;
+                
+                if (!telegramUser) {
+                    showAlert('error', 'Error', 'Unable to get Telegram user data. Please open this app from Telegram.');
+                    return;
+                }
+
+                // Fetch conversion rate from settings
+                await fetchPerkValue();
+
+                // Fetch user data
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('telegram_id, username, first_name, balance, role')
+                    .eq('telegram_id', telegramUser.id)
+                    .single();
+
+                if (userError) {
+                    console.error('User fetch error:', userError);
+                    showAlert('error', 'Error', 'Unable to fetch user data.');
+                    return;
+                }
+
+                currentUser = userData;
+                userBalance = parseFloat(userData.balance) || 0;
+
+                // Update UI
+                updateBalanceDisplay();
+                await loadWithdrawalHistory();
+
+                // Show settings section for admins
+                if (userData.role === 'admin') {
+                    document.getElementById('settingsSection').classList.remove('hidden');
+                    document.getElementById('perkValueInput').value = perkValue;
+                }
+
+                // Hide loading, show content
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('mainContent').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showAlert('error', 'Error', 'Something went wrong. Please try again.');
+            }
+                    }
+
+        // ============================================
+        // FETCH PERK VALUE FROM SETTINGS
+        // ============================================
+        async function fetchPerkValue() {
+            try {
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('setting_value')
+                    .eq('setting_key', 'perk_value')
+                    .single();
+
+                if (!error && data) {
+                    perkValue = parseFloat(data.setting_value);
+                } else {
+                    // If not found, insert default value
+                    await supabase.from('settings').insert({
+                        setting_key: 'perk_value',
+                        setting_value: '0.0001',
+                        description: 'Value of 1 PERK in USDT'
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching perk value:', error);
+            }
+        }
+
+        // ============================================
+        // SAVE PERK VALUE (ADMIN ONLY)
+        // ============================================
+        async function savePerkValue() {
+            const newValue = document.getElementById('perkValueInput').value;
+            
+            if (!newValue || parseFloat(newValue) <= 0) {
+                showAlert('error', 'Invalid Value', 'Please enter a valid conversion rate.');
+                return;
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('settings')
+                    .update({ setting_value: newValue })
+                    .eq('setting_key', 'perk_value');
+
+                if (error) throw error;
+
+                perkValue = parseFloat(newValue);
+                updateBalanceDisplay();
+                
+                // Update amount USDT if there's an amount entered
+                const amount = document.getElementById('amount').value;
+                if (amount) {
+                    updateUSDTEquivalent(amount);
+                }
+
+                showAlert('success', 'Success', 'Conversion rate updated successfully!');
+            } catch (error) {
+                console.error('Error saving perk value:', error);
+                showAlert('error', 'Error', 'Failed to save conversion rate.');
+            }
+        }
+
+        // ============================================
+        // UPDATE BALANCE DISPLAY
+        // ============================================
+        function updateBalanceDisplay() {
+            const perksBalanceEl = document.getElementById('perksBalance');
+            const usdtBalanceEl = document.getElementById('usdtBalance');
+
+            // Format PERKS balance with commas
+            perksBalanceEl.textContent = userBalance.toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+
+            // Calculate and format USDT equivalent
+            const usdtEquivalent = userBalance * perkValue;
+            usdtBalanceEl.textContent = usdtEquivalent.toFixed(4);
+        }
+
+        // ============================================
+        // SET AMOUNT (QUICK BUTTONS)
+        // ============================================
+        function setAmount(value) {
+            const amountInput = document.getElementById('amount');
+            
+            if (value === 'max') {
+                amountInput.value = Math.floor(userBalance);
+            } else {
+                amountInput.value = value;
+            }
+
+            updateUSDTEquivalent(amountInput.value);
+            
+            // Visual feedback
+            document.querySelectorAll('.quick-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // ============================================
+        // UPDATE USDT EQUIVALENT
+        // ============================================
+        function updateUSDTEquivalent(amount) {
+            const usdtEquivalentEl = document.getElementById('amountUSDT');
+            const amountValue = parseFloat(amount) || 0;
+            const usdtValue = amountValue * perkValue;
+            usdtEquivalentEl.textContent = `≈ ${usdtValue.toFixed(4)} USDT`;
+        }
+
+        // Listen for amount changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const amountInput = document.getElementById('amount');
+            if (amountInput) {
+                amountInput.addEventListener('input', function(e) {
+                    updateUSDTEquivalent(e.target.value);
+                });
+            }
+        });
+
+        // ============================================
+        // WITHDRAWAL FORM SUBMISSION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const withdrawalForm = document.getElementById('withdrawalForm');
+            if (withdrawalForm) {
+                withdrawalForm.addEventListener('submit', handleWithdrawal);
+            }
+        });
+
+        async function handleWithdrawal(e) {
+            e.preventDefault();
+
+            const crypto = document.getElementById('crypto').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const walletAddress = document.getElementById('walletAddress').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Validation
+            if (!crypto || !amount || !walletAddress) {
+                showAlert('error', 'Validation Error', 'Please fill in all fields.');
+                return;
+            }
+
+            if (amount < 10000) {
+                showAlert('error', 'Invalid Amount', 'Minimum withdrawal is 10,000 PERKS (1 USDT).');
+                return;
+            }
+
+            if (amount > userBalance) {
+                showAlert('error', 'Insufficient Balance', 'You do not have enough balance for this withdrawal.');
+                return;
+            }
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            try {
+                // Start transaction: Insert withdrawal and update balance
+                const { data: withdrawal, error: withdrawalError } = await supabase
+                    .from('withdrawals')
+                    .insert({
+                        user_id: currentUser.telegram_id,
+                        crypto: crypto,
+                        amount: amount,
+                        wallet_address: walletAddress,
+                        status: 'pending'
+                    })
+                    .select()
+                    .single();
+
+                if (withdrawalError) throw withdrawalError;
+
+                // Update user balance
+                const newBalance = userBalance - amount;
+                const { error: balanceError } = await supabase
+                    .from('users')
+                    .update({ 
+                        balance: newBalance,
+                        total_withdrawn: parseFloat(currentUser.total_withdrawn || 0) + amount
+                    })
+                    .eq('telegram_id', currentUser.telegram_id);
+
+                if (balanceError) throw balanceError;
+
+                // Create transaction record
+                await supabase.from('transactions').insert({
+                    user_id: currentUser.telegram_id,
+                    amount: -amount,
+                    type: 'withdrawal',
+                    description: `Withdrawal: $${amount} PERKS to$$ {crypto}`
+                });
+
+                // Update local balance
+                userBalance = newBalance;
+                updateBalanceDisplay();
+
+                // Clear form
+                document.getElementById('withdrawalForm').reset();
+                document.getElementById('amountUSDT').textContent = '≈ 0.00 USDT';
+
+                // Reload history
+                await loadWithdrawalHistory();
+
+                // Show success message
+                showAlert('success', 'Success!', 'Your withdrawal request has been submitted. It will be processed within 24-48 hours.');
+
+                // Send Telegram notification
+                tg.showAlert('Withdrawal request submitted successfully! ✅');
+
+            } catch (error) {
+                console.error('Withdrawal error:', error);
+                showAlert('error', 'Error', 'Failed to process withdrawal. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Withdrawal';
+            }
+        }
+
+        // ============================================
+        // TOGGLE HISTORY SECTION
+        // ============================================
+        function toggleHistory() {
+            const historySection = document.getElementById('historySection');
+            const historyToggle = document.querySelector('.history-toggle');
+            
+            historySection.classList.toggle('show');
+            historyToggle.classList.toggle('active');
+        }
+
+        // ============================================
+        // LOAD WITHDRAWAL HISTORY
+        // ============================================
+        async function loadWithdrawalHistory() {
+            try {
+                const { data: withdrawals, error } = await supabase
+                    .from('withdrawals')
+                    .select('*')
+                    .eq('user_id', currentUser.telegram_id)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const historyList = document.getElementById('historyList');
+
+                if (!withdrawals || withdrawals.length === 0) {
+                    historyList.innerHTML = `
+                        <div class="no-history">
+                            <i class="fas fa-inbox"></i>
+                            <p>No withdrawal history yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                historyList.innerHTML = withdrawals.map(w => {
+                    const statusClass = `status-${w.status}`;
+                    const statusIcon = {
+                        pending: 'fa-clock',
+                        approved: 'fa-check-circle',
+                        rejected: 'fa-times-circle'
+                    }[w.status] || 'fa-question-circle';
+
+                    const usdtAmount = (parseFloat(w.amount) * perkValue).toFixed(4);
+                    const date = new Date(w.created_at).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    return `
+                        <div class="history-item">
+                            <div class="history-header">
+                                <div class="history-crypto">
+                                    <i class="fa-solid fa-wallet"></i>
+                                    ${w.crypto}
+                                </div>
+                                <div class="status-badge ${statusClass}">
+                                    <i class="fas ${statusIcon}"></i> ${w.status}
+                                </div>
+                            </div>
+                            <div class="history-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">Amount:</span>
+                                    <span class="detail-value">${parseFloat(w.amount).toLocaleString()} PERKS</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">USDT Value:</span>
+                                    <span class="detail-value" style="color: var(--neon-green);">
+                                        <i class="fa-solid fa-dollar-sign"></i> ${usdtAmount}
+                                    </span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Wallet:</span>
+                                    <span class="detail-value wallet-address" title="${w.wallet_address}">${w.wallet_address}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Date:</span>
+                                    <span class="detail-value">${date}</span>
+                                </div>
+                                ${w.transaction_id ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">TX ID:</span>
+                                    <span class="detail-value wallet-address" title="${w.transaction_id}">${w.transaction_id}</span>
+                                </div>
+                                ` : ''}
+                                ${w.admin_note && w.status === 'rejected' ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">Note:</span>
+                                    <span class="detail-value" style="color: var(--error-color);">${w.admin_note}</span>
+                                </div>
+                                ` : ''}
+                                ${w.admin_note && w.status === 'approved' ? `
+                                <div class="detail-row">
+                                    <span class="detail-label">Note:</span>
+                                    <span class="detail-value" style="color: var(--success-color);">${w.admin_note}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading withdrawal history:', error);
+                document.getElementById('historyList').innerHTML = `
+                    <div class="no-history">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Failed to load withdrawal history</p>
+                    </div>
+                `;
+            }
+        }
+
+        // ============================================
+        // SHOW ALERT
+        // ============================================
+        function showAlert(type, title, message) {
+            const alertHTML = `
+                <div class="alert alert-${type}">
+                    <i class="fas fa-${
+                        type === 'success' ? 'check-circle' :
+                        type === 'error' ? 'times-circle' :
+                        type === 'warning' ? 'exclamation-triangle' :
+                        'info-circle'
+                    }"></i>
+                    <div class="alert-content">
+                        <div class="alert-title">${title}</div>
+                        <div class="alert-message">${message}</div>
+                    </div>
+                </div>
+            `;
+
+            const container = document.querySelector('.container');
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = alertHTML;
+            const alertEl = tempDiv.firstElementChild;
+
+            container.insertBefore(alertEl, container.firstChild);
+
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                alertEl.style.transition = 'opacity 0.3s ease';
+                alertEl.style.opacity = '0';
+                setTimeout(() => alertEl.remove(), 300);
+            }, 5000);
+        }
+
+        // ============================================
+        // REAL-TIME UPDATES (OPTIONAL)
+        // ============================================
+        function setupRealtimeUpdates() {
+            // Subscribe to withdrawal updates
+            const withdrawalSubscription = supabase
+                .channel('withdrawals_channel')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'withdrawals',
+                    filter: `user_id=eq.${currentUser.telegram_id}`
+                }, (payload) => {
+                    console.log('Withdrawal update:', payload);
+                    loadWithdrawalHistory();
+                    
+                    // Show notification for status changes
+                    if (payload.eventType === 'UPDATE') {
+                        const status = payload.new.status;
+                        if (status === 'approved') {
+                            tg.showAlert('✅ Your withdrawal has been approved!');
+                        } else if (status === 'rejected') {
+                            tg.showAlert('❌ Your withdrawal was rejected. Please check your history for details.');
+                        }
+                    }
+                })
+                .subscribe();
+
+            // Subscribe to balance updates
+            const balanceSubscription = supabase
+                .channel('balance_channel')
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'users',
+                    filter: `telegram_id=eq.${currentUser.telegram_id}`
+                }, (payload) => {
+                    console.log('Balance update:', payload);
+                    userBalance = parseFloat(payload.new.balance);
+                    updateBalanceDisplay();
+                })
+                .subscribe();
+        }
+
+        // ============================================
+        // TELEGRAM BACK BUTTON
+        // ============================================
+        tg.BackButton.onClick(function() {
+            window.location.href = 'index.html';
+        });
+        tg.BackButton.show();
+
+        // ============================================
+        // START APPLICATION
+        // ============================================
+        window.addEventListener('load', function() {
+            init().then(() => {
+                // Setup real-time updates after initialization
+                if (currentUser) {
+                    setupRealtimeUpdates();
+                }
+            });
+        });
+
+        // ============================================
+        // PREVENT ZOOM ON DOUBLE TAP (iOS)
+        // ============================================
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // ============================================
+        // HAPTIC FEEDBACK FOR BUTTONS
+        // ============================================
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('.submit-btn, .quick-btn, .nav-btn, .history-toggle')) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+        });
+    </script>
+</body>
+</html>
+
+        
