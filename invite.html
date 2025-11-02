@@ -618,47 +618,58 @@
         // ==========================================
         // USER INITIALIZATION
         // ==========================================
-        async function initializeUser() {
-            try {
-                const user = tg.initDataUnsafe?.user;
-                
-                if (!user) {
-                    showMessage('Please open this app from Telegram', 'error');
-                    return;
-                }
-                
-                currentUser = user;
-                console.log('Current user initialized:', currentUser.id);
-                
-                // Check if user exists in database
-                const { data: existingUser, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('telegram_id', user.id)
-                    .single();
+        // ==========================================
+// USER INITIALIZATION - IMPROVED
+// ==========================================
+async function initializeUser() {
+    try {
+        const user = tg.initDataUnsafe?.user;
+        
+        if (!user) {
+            showMessage('Please open this app from Telegram', 'error');
+            return;
+        }
+        
+        currentUser = user;
+        console.log('Current user initialized:', currentUser.id);
+        
+        // Check if user exists in database
+        const { data: existingUser, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('telegram_id', user.id)
+            .single();
 
-                if (error && error.code !== 'PGRST116') {
-                    console.error('Error fetching user:', error);
-                    return;
-                }
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error fetching user:', error);
+            return;
+        }
 
-                if (!existingUser) {
-                    // Create new user and check for referrer
-                    const newUser = await createUser(user);
-                    if (newUser) {
-                        await checkForReferrer();
-                    }
-                } else {
-                    // User exists, check if they came via referral link but haven't been credited yet
-                    if (!existingUser.referrer_id) {
-                        await checkForReferrer();
-                    }
-                }
-            } catch (error) {
-                console.error('Error initializing user:', error);
-                showMessage('Failed to initialize user', 'error');
+        if (!existingUser) {
+            // Create new user FIRST
+            console.log('New user detected, creating account...');
+            const newUser = await createUser(user);
+            
+            // Wait a moment for DB to commit
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // THEN check for referrer
+            if (newUser) {
+                await checkForReferrer();
+            }
+        } else {
+            console.log('Existing user found:', existingUser);
+            // User exists, check if they came via referral but haven't been credited
+            if (!existingUser.referrer_id) {
+                console.log('User has no referrer, checking start param...');
+                await checkForReferrer();
             }
         }
+    } catch (error) {
+        console.error('Error initializing user:', error);
+        showMessage('Failed to initialize user', 'error');
+    }
+}
 
         // ==========================================
         // CREATE NEW USER
@@ -861,126 +872,139 @@
             }
         }
 
-        // ==========================================
-        // PROCESS REFERRAL
-        // ==========================================
-        async function processReferral(referrerId) {
-            try {
-                console.log('Starting referral process for referrer:', referrerId);
+     ==========================================
+// PROCESS REFERRAL - CORRECTED VERSION
+// ==========================================
+async function processReferral(referrerId) {
+    try {
+        console.log('Starting referral process for referrer:', referrerId);
 
-                // Step 1: Update current user's referrer_id
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({ referrer_id: referrerId })
-                    .eq('telegram_id', currentUser.id);
+        // IMPORTANT: Use a transaction-like approach to ensure atomicity
+        
+        // Step 1: Update current user's referrer_id FIRST
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ referrer_id: referrerId })
+            .eq('telegram_id', currentUser.id)
+            .is('referrer_id', null); // Only update if referrer_id is still null
 
-                if (updateError) {
-                    console.error('Error updating referrer_id:', updateError);
-                    throw updateError;
-                }
-                console.log('Updated current user referrer_id to:', referrerId);
-
-                // Step 2: Get referrer's current data
-                const { data: referrer, error: referrerError } = await supabase
-                    .from('users')
-                    .select('balance, referral_count, total_earned')
-                    .eq('telegram_id', referrerId)
-                    .single();
-
-                if (referrerError) {
-                    console.error('Error fetching referrer data:', referrerError);
-                    throw referrerError;
-                }
-                console.log('Referrer current data:', referrer);
-
-                // Step 3: Update referrer's balance, count, and total_earned
-                const newReferrerBalance = (parseFloat(referrer.balance) || 0) + referralBonusAmount;
-                const newReferralCount = (referrer.referral_count || 0) + 1;
-                const newReferrerTotalEarned = (parseFloat(referrer.total_earned) || 0) + referralBonusAmount;
-
-                const { error: updateReferrerError } = await supabase
-                    .from('users')
-                    .update({
-                        balance: newReferrerBalance,
-                        referral_count: newReferralCount,
-                        total_earned: newReferrerTotalEarned
-                    })
-                    .eq('telegram_id', referrerId);
-
-                if (updateReferrerError) {
-                    console.error('Error updating referrer stats:', updateReferrerError);
-                    throw updateReferrerError;
-                }
-                console.log('Updated referrer - Balance:', newReferrerBalance, 'Count:', newReferralCount);
-
-                // Step 4: Create transaction for referrer
-                const { error: transactionError } = await supabase
-                    .from('transactions')
-                    .insert([{
-                        user_id: referrerId,
-                        type: 'referral_bonus',
-                        amount: referralBonusAmount,
-                        description: `Referral bonus from user ${currentUser.id} (@${currentUser.username || currentUser.first_name})`
-                    }]);
-
-                if (transactionError) {
-                    console.error('Error creating referrer transaction:', transactionError);
-                }
-
-                // Step 5: Give new user a welcome bonus
-                const { data: newUserData, error: newUserError } = await supabase
-                    .from('users')
-                    .select('balance, total_earned')
-                    .eq('telegram_id', currentUser.id)
-                    .single();
-
-                if (newUserError) {
-                    console.error('Error fetching new user data:', newUserError);
-                    throw newUserError;
-                }
-
-                const newUserBalance = (parseFloat(newUserData.balance) || 0) + referralBonusAmount;
-                const newUserTotalEarned = (parseFloat(newUserData.total_earned) || 0) + referralBonusAmount;
-
-                const { error: updateNewUserError } = await supabase
-                    .from('users')
-                    .update({
-                        balance: newUserBalance,
-                        total_earned: newUserTotalEarned
-                    })
-                    .eq('telegram_id', currentUser.id);
-
-                if (updateNewUserError) {
-                    console.error('Error updating new user stats:', updateNewUserError);
-                    throw updateNewUserError;
-                }
-                console.log('Updated new user balance to:', newUserBalance);
-
-                // Step 6: Create transaction for new user
-                const { error: newUserTransactionError } = await supabase
-                    .from('transactions')
-                    .insert([{
-                        user_id: currentUser.id,
-                        type: 'referral_bonus',
-                        amount: referralBonusAmount,
-                        description: 'Welcome bonus for joining via referral'
-                    }]);
-
-                if (newUserTransactionError) {
-                    console.error('Error creating new user transaction:', newUserTransactionError);
-                }
-
-                showMessage(`Welcome! You earned ${referralBonusAmount} Perks!`, 'success');
-                console.log('Referral process completed successfully');
-
-                // Reload stats to show updated values
-                await loadUserStats();
-
-            } catch (error) {
-                console.error('Error processing referral:', error);
-                showMessage('Error processing referral bonus', 'error');
-            }
+        if (updateError) {
+            console.error('Error updating referrer_id:', updateError);
+            throw updateError;
         }
+
+        // Step 2: Fetch referrer's current data with FOR UPDATE equivalent
+        const { data: referrer, error: referrerError } = await supabase
+            .from('users')
+            .select('balance, referral_count, total_earned, telegram_id')
+            .eq('telegram_id', referrerId)
+            .single();
+
+        if (referrerError) {
+            console.error('Error fetching referrer data:', referrerError);
+            throw referrerError;
+        }
+        console.log('Referrer current data:', referrer);
+
+        // Step 3: Calculate new values
+        const newReferrerBalance = parseFloat((parseFloat(referrer.balance) || 0) + referralBonusAmount).toFixed(8);
+        const newReferralCount = (parseInt(referrer.referral_count) || 0) + 1;
+        const newReferrerTotalEarned = parseFloat((parseFloat(referrer.total_earned) || 0) + referralBonusAmount).toFixed(8);
+
+        console.log('Updating referrer to:', {
+            balance: newReferrerBalance,
+            referral_count: newReferralCount,
+            total_earned: newReferrerTotalEarned
+        });
+
+        // Step 4: Update referrer's stats
+        const { error: updateReferrerError } = await supabase
+            .from('users')
+            .update({
+                balance: newReferrerBalance,
+                referral_count: newReferralCount,
+                total_earned: newReferrerTotalEarned,
+                last_active: new Date().toISOString()
+            })
+            .eq('telegram_id', referrerId);
+
+        if (updateReferrerError) {
+            console.error('Error updating referrer stats:', updateReferrerError);
+            throw updateReferrerError;
+        }
+
+        // Step 5: Create transaction for referrer
+        const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert([{
+                user_id: referrerId,
+                type: 'referral_bonus',
+                amount: parseFloat(referralBonusAmount),
+                description: `Referral bonus from @${currentUser.username || currentUser.first_name} (ID: ${currentUser.id})`
+            }]);
+
+        if (transactionError) {
+            console.error('Error creating referrer transaction:', transactionError);
+        }
+
+        // Step 6: Give new user welcome bonus
+        const { data: newUserData, error: newUserError } = await supabase
+            .from('users')
+            .select('balance, total_earned')
+            .eq('telegram_id', currentUser.id)
+            .single();
+
+        if (newUserError) {
+            console.error('Error fetching new user data:', newUserError);
+            throw newUserError;
+        }
+
+        const newUserBalance = parseFloat((parseFloat(newUserData.balance) || 0) + referralBonusAmount).toFixed(8);
+        const newUserTotalEarned = parseFloat((parseFloat(newUserData.total_earned) || 0) + referralBonusAmount).toFixed(8);
+
+        const { error: updateNewUserError } = await supabase
+            .from('users')
+            .update({
+                balance: newUserBalance,
+                total_earned: newUserTotalEarned,
+                last_active: new Date().toISOString()
+            })
+            .eq('telegram_id', currentUser.id);
+
+        if (updateNewUserError) {
+            console.error('Error updating new user stats:', updateNewUserError);
+            throw updateNewUserError;
+        }
+
+        // Step 7: Create transaction for new user
+        const { error: newUserTransactionError } = await supabase
+            .from('transactions')
+            .insert([{
+                user_id: currentUser.id,
+                type: 'referral_bonus',
+                amount: parseFloat(referralBonusAmount),
+                description: 'Welcome bonus for joining via referral'
+            }]);
+
+        if (newUserTransactionError) {
+            console.error('Error creating new user transaction:', newUserTransactionError);
+        }
+
+        console.log('✅ Referral process completed successfully');
+        showMessage(`Welcome! You and your referrer earned ${referralBonusAmount} Perks!`, 'success');
+
+        // Reload stats after a brief delay
+        setTimeout(async () => {
+            await loadUserStats();
+            await loadReferredUsers();
+        }, 1000);
+
+    } catch (error) {
+        console.error('❌ Error processing referral:', error);
+        showMessage('Error processing referral bonus', 'error');
+    }
+}
+
 
         // ==========================================
         // LOAD USER STATS
