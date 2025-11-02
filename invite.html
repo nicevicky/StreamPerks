@@ -595,7 +595,7 @@
         tg.expand();
 
         let currentUser = null;
-        let referralBonus = 0;
+        let dailyBonus = 0;
 
         // ==========================================
         // INITIALIZATION
@@ -608,7 +608,7 @@
             }
 
             await initializeUser();
-            await loadReferralSettings();
+            await loadDailyBonusSettings();
             generateInviteLink();
             await loadReferredUsers();
             
@@ -685,26 +685,26 @@
         }
 
         // ==========================================
-        // LOAD REFERRAL SETTINGS
+        // LOAD DAILY BONUS SETTINGS
         // ==========================================
-        async function loadReferralSettings() {
+        async function loadDailyBonusSettings() {
             try {
                 const { data, error } = await supabase
                     .from('settings')
                     .select('setting_value')
-                    .eq('setting_key', 'referral_bonus')
+                    .eq('setting_key', 'daily_bonus')
                     .single();
 
                 if (error) throw error;
                 
-                referralBonus = parseFloat(data.setting_value) || 50;
+                dailyBonus = parseFloat(data.setting_value) || 1;
                 document.getElementById('bonusBadge').innerHTML = 
-                    `<i class="fas fa-star"></i> Earn ${referralBonus} Perks per referral!`;
+                    `<i class="fas fa-star"></i> Earn ${dailyBonus} Perks per referral!`;
             } catch (error) {
-                console.error('Error loading referral settings:', error);
-                referralBonus = 50;
+                console.error('Error loading daily bonus settings:', error);
+                dailyBonus = 1;
                 document.getElementById('bonusBadge').innerHTML = 
-                    `<i class="fas fa-star"></i> Earn ${referralBonus} Perks per referral!`;
+                    `<i class="fas fa-star"></i> Earn ${dailyBonus} Perks per referral!`;
             }
         }
 
@@ -757,7 +757,7 @@
             const inviteLink = document.getElementById('inviteLink').textContent;
             if (inviteLink === 'Loading...') return;
 
-            const shareText = `🎥 Join me on StreamPerks and start earning rewards by watching ads!\n\n💰 Get bonus Perks when you sign up!\n\n${inviteLink}`;
+            const shareText = `Join me on StreamPerks and start earning rewards by watching ads!\n\nGet bonus Perks when you sign up!\n\n${inviteLink}`;
 
             if (tg.openTelegramLink) {
                 tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
@@ -820,9 +820,9 @@
                 await supabase
                     .from('users')
                     .update({
-                        balance: (referrer.balance || 0) + referralBonus,
+                        balance: (referrer.balance || 0) + dailyBonus,
                         referral_count: (referrer.referral_count || 0) + 1,
-                        total_earned: (referrer.total_earned || 0) + referralBonus
+                        total_earned: (referrer.total_earned || 0) + dailyBonus
                     })
                     .eq('telegram_id', referrerId);
 
@@ -831,7 +831,7 @@
                     .insert([{
                         user_id: referrerId,
                         type: 'referral_bonus',
-                        amount: referralBonus,
+                        amount: dailyBonus,
                         description: `Referral bonus from user ${currentUser.id}`
                     }]);
 
@@ -846,21 +846,21 @@
                 await supabase
                     .from('users')
                     .update({
-                        balance: (newUser.balance || 0) + referralBonus,
-                        total_earned: (newUser.total_earned || 0) + referralBonus
+                        balance: (newUser.balance || 0) + dailyBonus,
+                        total_earned: (newUser.total_earned || 0) + dailyBonus
                     })
                     .eq('telegram_id', currentUser.id);
 
                 await supabase
                     .from('transactions')
                     .insert([{
-                                                user_id: currentUser.id,
+                        user_id: currentUser.id,
                         type: 'referral_bonus',
-                        amount: referralBonus,
+                        amount: dailyBonus,
                         description: 'Welcome bonus for joining via referral'
                     }]);
 
-                showMessage(`Welcome! You earned ${referralBonus} Perks!`, 'success');
+                showMessage(`Welcome! You earned ${dailyBonus} Perks!`, 'success');
 
             } catch (error) {
                 console.error('Error processing referral:', error);
@@ -932,7 +932,7 @@
                         </div>
                         <div class="user-bonus">
                             <i class="fas fa-coins"></i>
-                            +${referralBonus}
+                            +${dailyBonus}
                         </div>
                     </div>
                 `;
@@ -947,7 +947,7 @@
         function updateStatsDisplay(userData) {
             document.getElementById('referralCount').textContent = userData.referral_count || 0;
             
-            const totalBonus = (userData.referral_count || 0) * referralBonus;
+            const totalBonus = (userData.referral_count || 0) * dailyBonus;
             document.getElementById('totalBonus').textContent = totalBonus;
         }
 
@@ -983,19 +983,19 @@
                 const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
                 if (diffHours === 0) {
                     const diffMinutes = Math.floor(diffTime / (1000 * 60));
-                    return `$${diffMinutes} min$$ {diffMinutes !== 1 ? 's' : ''} ago`;
+                    return `${diffMinutes} min${diffMinutes !== 1 ? 's' : ''} ago`;
                 }
-                return `$${diffHours} hour$$ {diffHours !== 1 ? 's' : ''} ago`;
+                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
             } else if (diffDays === 1) {
                 return 'Yesterday';
             } else if (diffDays < 7) {
                 return `${diffDays} days ago`;
             } else if (diffDays < 30) {
                 const weeks = Math.floor(diffDays / 7);
-                return `$${weeks} week$$ {weeks !== 1 ? 's' : ''} ago`;
+                return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
             } else if (diffDays < 365) {
                 const months = Math.floor(diffDays / 30);
-                return `$${months} month$$ {months !== 1 ? 's' : ''} ago`;
+                return `${months} month${months !== 1 ? 's' : ''} ago`;
             } else {
                 return date.toLocaleDateString('en-US', { 
                     year: 'numeric', 
@@ -1011,11 +1011,11 @@
         function escapeHtml(text) {
             if (typeof text !== 'string') return '';
             const map = {
-                '&': '&',
-                '<': '<',
-                '>': '>',
-                '"': '"',
-                "'": '''
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#x27;'
             };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
@@ -1032,7 +1032,7 @@
                     .single();
 
                 if (!error && data) {
-                    await loadReferralSettings();
+                    await loadDailyBonusSettings();
                     updateStatsDisplay(data);
                 }
 
