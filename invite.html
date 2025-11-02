@@ -744,7 +744,7 @@
         function generateInviteLink() {
             if (!currentUser) return;
             
-            const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/app?startapp=${currentUser.id}`;
+            const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/Perks?startapp=${currentUser.id}`;
             document.getElementById('inviteLink').textContent = inviteLink;
             console.log('Invite link generated:', inviteLink);
         }
