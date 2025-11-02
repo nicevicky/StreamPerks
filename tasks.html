@@ -1452,7 +1452,7 @@
                     try {
                         await window[sdkName]();
                         
-                        const success = await recordAdWatch(adId, reward);
+                        const success = await recordAdWatch(adId, adId, reward);
                         
                         if (success) {
                             showMessage(`You earned ${parseFloat(reward).toFixed(8)} Perks!`, 'success');
@@ -1627,5 +1627,5 @@
         
         init();
     </script>
-      </body>
+    </body>
 </html>
