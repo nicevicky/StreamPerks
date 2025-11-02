@@ -1,3 +1,12 @@
+in this code I'm getting this error tell me what I'm here to replace 
+
+Cannot read properties of undefined (reading 'toFixed')
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1452,7 +1461,7 @@
                     try {
                         await window[sdkName]();
                         
-                        const success = await recordAdWatch(adId, adId, reward);
+                        const success = await recordAdWatch(adId, reward);
                         
                         if (success) {
                             showMessage(`You earned ${parseFloat(reward).toFixed(8)} Perks!`, 'success');
