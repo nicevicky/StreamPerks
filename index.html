@@ -225,6 +225,161 @@
             font-size: 16px;
             color: var(--text-secondary);
         }
+
+        /* 3D Perk Progress Bar Styles */
+        .perk-progress-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .perk-progress-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(147, 51, 234, 0.1), transparent);
+            transform: rotate(45deg);
+            transition: all 0.6s ease;
+        }
+        .perk-progress-card:hover::before {
+            left: 100%;
+        }
+        .perk-progress-card:hover {
+            transform: translateY(-5px) rotateX(2deg);
+            box-shadow: 0 15px 50px rgba(147, 51, 234, 0.4);
+        }
+        .perk-progress-container {
+            position: relative;
+            z-index: 2;
+        }
+        .perk-progress-track {
+            position: relative;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: visible;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+            margin: 40px 0 30px;
+        }
+        .perk-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #9333ea, #c026d3, #e879f9);
+            border-radius: 20px;
+            width: 0%;
+            transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            box-shadow: 
+                0 0 20px rgba(147, 51, 234, 0.6),
+                0 0 40px rgba(147, 51, 234, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            animation: progressGlow 2s ease-in-out infinite;
+        }
+        @keyframes progressGlow {
+            0%, 100% { 
+                box-shadow: 
+                    0 0 20px rgba(147, 51, 234, 0.6),
+                    0 0 40px rgba(147, 51, 234, 0.4),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            }
+            50% { 
+                box-shadow: 
+                    0 0 30px rgba(147, 51, 234, 0.8),
+                    0 0 60px rgba(147, 51, 234, 0.6),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            }
+        }
+        .perk-progress-badge {
+            position: absolute;
+            top: -35px;
+            left: 0%;
+            transform: translateX(-50%);
+            transition: left 2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 10;
+        }
+        .perk-badge-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #e879f9;
+            text-shadow: 0 0 10px rgba(232, 121, 249, 0.8);
+            animation: labelFloat 2s ease-in-out infinite;
+        }
+        @keyframes labelFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+        .perk-badge-circle {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, #9333ea, #c026d3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 4px 15px rgba(147, 51, 234, 0.6),
+                0 0 25px rgba(147, 51, 234, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            animation: badgePulse 2s ease-in-out infinite;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        @keyframes badgePulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 
+                    0 4px 15px rgba(147, 51, 234, 0.6),
+                    0 0 25px rgba(147, 51, 234, 0.4),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.3);
+            }
+            50% { 
+                transform: scale(1.1);
+                box-shadow: 
+                    0 4px 20px rgba(147, 51, 234, 0.8),
+                    0 0 35px rgba(147, 51, 234, 0.6),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            }
+        }
+        .perk-badge-icon {
+            font-size: 14px;
+            color: #ffffff;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        }
+        .perk-progress-text {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+        .perk-progress-text strong {
+            color: #e879f9;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(232, 121, 249, 0.4);
+        }
+        .perk-highlight {
+            font-size: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #9333ea, #e879f9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -531,6 +686,25 @@
                     <div class="balance-currency">StreamPerks Tokens</div>
                 </div>
             </div>
+
+            <!-- 3D Perk Progress Bar -->
+            <div class="perk-progress-card">
+                <div class="perk-progress-container">
+                    <div class="perk-progress-track">
+                        <div class="perk-progress-fill" id="perkProgressFill"></div>
+                        <div class="perk-progress-badge" id="perkProgressBadge">
+                            <div class="perk-badge-label">PERK</div>
+                            <div class="perk-badge-circle">
+                                <i class="fas fa-star perk-badge-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="perk-progress-text">
+                        <div class="perk-highlight">Perks added!</div>
+                        You've earned <strong id="perkCurrent">0</strong> / <strong id="perkTarget">10,000</strong> Perks (<strong id="perkPercentage">0%</strong>)
+                    </div>
+                </div>
+            </div>
             
             <div class="stats-grid">
                 <div class="stat-card">
@@ -572,7 +746,7 @@
             <i class="fas fa-list-check nav-icon"></i>
             <span class="nav-label">Tasks</span>
         </a>
-        <a href="withdraw.html" class="nav-btn">
+                <a href="withdraw.html" class="nav-btn">
             <i class="fas fa-wallet nav-icon"></i>
             <span class="nav-label">Withdraw</span>
         </a>
@@ -611,6 +785,31 @@
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 5000);
+        }
+
+        // Update Perk Progress Bar
+        function updatePerkProgress(currentBalance) {
+            const targetPerks = 10000;
+            const currentPerks = parseFloat(currentBalance) || 0;
+            const percentage = Math.min((currentPerks / targetPerks) * 100, 100);
+            
+            // Update progress fill
+            const progressFill = document.getElementById('perkProgressFill');
+            const progressBadge = document.getElementById('perkProgressBadge');
+            
+            // Animate progress bar
+            setTimeout(() => {
+                progressFill.style.width = percentage + '%';
+                progressBadge.style.left = percentage + '%';
+            }, 300);
+            
+            // Update text values
+            document.getElementById('perkCurrent').textContent = currentPerks.toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            });
+            document.getElementById('perkTarget').textContent = targetPerks.toLocaleString('en-US');
+            document.getElementById('perkPercentage').textContent = percentage.toFixed(1) + '%';
         }
 
         async function getReferralBonus() {
@@ -776,97 +975,102 @@
                         if (referrerId && referrerId !== user.id) {
                             updateLoadingText('Processing referral bonus...');
                             const referralResult = await processReferral(user.id, referrerId);
-                                                    if (referralResult && referralResult.success) {
-                            // Show referral notification
-                            setTimeout(() => {
-                                showReferralNotification(referralResult.bonusAmount);
-                            }, 1000);
+                            
+                            if (referralResult && referralResult.success) {
+                                // Show referral notification
+                                setTimeout(() => {
+                                    showReferralNotification(referralResult.bonusAmount);
+                                }, 1000);
+                            }
                         }
-                    }
 
-                    // Fetch updated user data
-                    const { data: finalUser } = await supabaseClient
-                        .from('users')
-                        .select('*')
-                        .eq('telegram_id', user.id)
-                        .single();
-                    currentUser = finalUser || createdUser;
-                } else {
-                    document.getElementById('loadingScreen').innerHTML = `<p style="color: #ff6464;">Failed to create user account. Please restart the app.</p>`;
+                        // Fetch updated user data
+                        const { data: finalUser } = await supabaseClient
+                            .from('users')
+                            .select('*')
+                            .eq('telegram_id', user.id)
+                            .single();
+                        currentUser = finalUser || createdUser;
+                    } else {
+                        document.getElementById('loadingScreen').innerHTML = `<p style="color: #ff6464;">Failed to create user account. Please restart the app.</p>`;
+                        return;
+                    }
+                }
+
+                if (currentUser.banned) {
+                    document.getElementById('loadingScreen').innerHTML = '<p style="color: #ff6464;"><i class="fas fa-ban"></i><br><br>Your account has been banned</p>';
                     return;
                 }
+
+                await loadUserData();
+
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+
+            } catch (error) {
+                console.error('Error during app initialization:', error);
+                document.getElementById('loadingScreen').style.display = 'flex';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('loadingScreen').innerHTML = `
+                    <p style="color: #ff6464;">
+                        <i class="fas fa-exclamation-triangle"></i><br><br>
+                        An error occurred.<br>
+                        Please try restarting the app.
+                    </p>
+                    <p style="font-size: 10px; opacity: 0.5; margin-top: 10px;">
+                        Error: ${error.message}
+                    </p>
+                `;
+            }
+        }
+
+        async function loadUserData() {
+            if (!currentUser) return;
+
+            updateLoadingText('Loading dashboard...');
+
+            // Show admin button if user is admin OR if user ID matches ADMIN_ID
+            if (currentUser.role === 'admin' || currentUser.telegram_id.toString() === ADMIN_ID) {
+                document.getElementById('adminBtn').classList.add('show');
             }
 
-            if (currentUser.banned) {
-                document.getElementById('loadingScreen').innerHTML = '<p style="color: #ff6464;"><i class="fas fa-ban"></i><br><br>Your account has been banned</p>';
-                return;
+            const userName = currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
+
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('userUsername').textContent = currentUser.username ? '@' + currentUser.username : '';
+            document.getElementById('userBalance').textContent = parseFloat(currentUser.balance || 0).toFixed(2);
+            document.getElementById('totalEarned').textContent = parseFloat(currentUser.total_earned || 0).toFixed(2);
+            document.getElementById('totalWithdrawn').textContent = parseFloat(currentUser.total_withdrawn || 0).toFixed(2);
+            document.getElementById('referralCount').textContent = currentUser.referral_count || 0;
+
+            const avatarEl = document.getElementById('userAvatar');
+            if (currentUser.photo_url) {
+                avatarEl.innerHTML = `<img src="${currentUser.photo_url}" alt="Profile">`;
+            } else {
+                avatarEl.innerHTML = userName.charAt(0).toUpperCase();
             }
 
-            await loadUserData();
+            if (currentUser.verified) {
+                document.getElementById('verifiedBadge').style.display = 'inline-block';
+            }
 
-            document.getElementById('loadingScreen').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'block';
-
-        } catch (error) {
-            console.error('Error during app initialization:', error);
-            document.getElementById('loadingScreen').style.display = 'flex';
-            document.getElementById('mainContent').style.display = 'none';
-            document.getElementById('loadingScreen').innerHTML = `
-                <p style="color: #ff6464;">
-                    <i class="fas fa-exclamation-triangle"></i><br><br>
-                    An error occurred.<br>
-                    Please try restarting the app.
-                </p>
-                <p style="font-size: 10px; opacity: 0.5; margin-top: 10px;">
-                    Error: ${error.message}
-                </p>
-            `;
-        }
-    }
-
-    async function loadUserData() {
-        if (!currentUser) return;
-
-        updateLoadingText('Loading dashboard...');
-
-        // Show admin button if user is admin OR if user ID matches ADMIN_ID
-        if (currentUser.role === 'admin' || currentUser.telegram_id.toString() === ADMIN_ID) {
-            document.getElementById('adminBtn').classList.add('show');
+            // Update Perk Progress Bar with user's actual balance
+            updatePerkProgress(currentUser.balance || 0);
         }
 
-        const userName = currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
-
-        document.getElementById('userName').textContent = userName;
-        document.getElementById('userUsername').textContent = currentUser.username ? '@' + currentUser.username : '';
-        document.getElementById('userBalance').textContent = parseFloat(currentUser.balance || 0).toFixed(2);
-        document.getElementById('totalEarned').textContent = parseFloat(currentUser.total_earned || 0).toFixed(2);
-        document.getElementById('totalWithdrawn').textContent = parseFloat(currentUser.total_withdrawn || 0).toFixed(2);
-        document.getElementById('referralCount').textContent = currentUser.referral_count || 0;
-
-        const avatarEl = document.getElementById('userAvatar');
-        if (currentUser.photo_url) {
-            avatarEl.innerHTML = `<img src="${currentUser.photo_url}" alt="Profile">`;
-        } else {
-            avatarEl.innerHTML = userName.charAt(0).toUpperCase();
+        async function updateLastActive(userId) {
+            try {
+                await supabaseClient
+                    .from('users')
+                    .update({ last_active: new Date().toISOString() })
+                    .eq('telegram_id', userId);
+            } catch (error) {
+                console.error('Error updating last active:', error);
+            }
         }
 
-        if (currentUser.verified) {
-            document.getElementById('verifiedBadge').style.display = 'inline-block';
-        }
-    }
-
-    async function updateLastActive(userId) {
-        try {
-            await supabaseClient
-                .from('users')
-                .update({ last_active: new Date().toISOString() })
-                .eq('telegram_id', userId);
-        } catch (error) {
-            console.error('Error updating last active:', error);
-        }
-    }
-
-    initApp();
-</script>
+        initApp();
+    </script>
 </body>
 </html>
+
