@@ -93,6 +93,8 @@
             transition: all 0.3s ease;
             display: none;
             text-decoration: none;
+            border: none;
+            outline: none;
         }
         .admin-btn.show {
             display: inline-block;
@@ -656,9 +658,9 @@
     
     <div class="header">
         <div class="logo">StreamPerks</div>
-        <a href="admin.html" class="admin-btn" id="adminBtn">
+        <button class="admin-btn" id="adminBtn" style="display: none;">
             <i class="fas fa-shield-halved"></i> Admin
-        </a>
+        </button>
     </div>
     
     <div class="dashboard">
@@ -744,7 +746,7 @@
         <a href="index.html" class="nav-btn active"><i class="fas fa-house nav-icon"></i>
             <span class="nav-label">Home</span>
         </a>
-        <a href="tasks.html" class="nav-btn">
+                <a href="tasks.html" class="nav-btn">
             <i class="fas fa-list-check nav-icon"></i>
             <span class="nav-label">Tasks</span>
         </a>
@@ -904,6 +906,28 @@
             }
         }
 
+        // Navigate to admin page
+        function navigateToAdmin() {
+            console.log('Admin button clicked - navigating to admin.html');
+            try {
+                // Try multiple navigation methods
+                
+                // Method 1: Direct window.location
+                window.location.href = 'admin.html';
+                
+                // Method 2: If Method 1 doesn't work, try with setTimeout
+                setTimeout(() => {
+                    if (window.location.pathname.indexOf('admin.html') === -1) {
+                        window.location.replace('admin.html');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error navigating to admin page:', error);
+                alert('Error opening admin panel. Please try again.');
+            }
+        }
+
         async function initApp() {
             try {
                 tg.ready();
@@ -1034,8 +1058,18 @@
             // Show admin button if user is admin OR if user ID matches ADMIN_ID
             if (currentUser.role === 'admin' || currentUser.telegram_id.toString() === ADMIN_ID) {
                 const adminBtn = document.getElementById('adminBtn');
+                adminBtn.style.display = 'inline-block';
                 adminBtn.classList.add('show');
-                console.log('Admin button displayed');
+                
+                // Add click event listener to admin button
+                adminBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Admin button clicked!');
+                    navigateToAdmin();
+                });
+                
+                console.log('Admin button displayed and click handler attached');
             }
 
             const userName = currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
@@ -1073,9 +1107,9 @@
             }
         }
 
+        // Initialize app when page loads
         initApp();
     </script>
 </body>
 </html>
 
-            
