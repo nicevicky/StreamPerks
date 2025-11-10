@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - StreamPerks</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        :root {
+            --bg-dark: #0a0a0f;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-cyan: #00f2ff;
+            --neon-cyan-glow: rgba(0, 242, 255, 0.5);
+            --text-primary: #ffffff;
+            --text-secondary: #b4b4b4;
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            padding-bottom: 90px;
+        }
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 50%, rgba(0, 242, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(50px, 50px) rotate(120deg); }
+            66% { transform: translate(-50px, 100px) rotate(240deg); }
+        }
+        .header {
+            padding: 20px 20px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            z-index: 10;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px var(--neon-cyan-glow);
+            letter-spacing: 1px;
+        }
+        .admin-badge {
+            background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 15px var(--neon-cyan-glow);
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        @keyframes badgePulse {
+            0%, 100% { box-shadow: 0 4px 15px var(--neon-cyan-glow); }
+            50% { box-shadow: 0 4px 25px var(--neon-cyan-glow); }
+        }
+        .dashboard {
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .welcome-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(0, 242, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s linear infinite;
+        }
+        @keyframes shimmer {
+            0% { left: -50%; }
+            100% { left: 150%; }
+        }
+        .welcome-content {
+            position: relative;
+            z-index: 2;
+        }
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .welcome-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 10px 30px var(--neon-cyan-glow);
+        }
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, var(--neon-cyan-glow), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .stat-card:hover::after {
+            opacity: 1;
+        }
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+            z-index: 2;
+        }
+        .stat-icon.users {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+        .stat-icon.tasks {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+        .stat-icon.withdrawals {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+        .stat-icon.revenue {
+            background: linear-gradient(135deg, #9333ea, #7e22ce);
+            box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+        }
+        .stat-trend {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+        }
+        .stat-trend.up {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+        .stat-trend.down {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 2;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 2;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-primary);
+        }
+        .section-title i {
+            color: var(--neon-cyan);
+            font-size: 20px;
+        }
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .action-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--text-primary);
+            position: relative;
+            overflow: hidden;
+        }
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(0, 242, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .action-card:active::before {
+            width: 300px;
+            height: 300px;
+        }
+        .action-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--neon-cyan);
+            box-shadow: 0 10px 30px var(--neon-cyan-glow);
+        }
+        .action-icon {
+            width: 55px;
+            height: 55px;
+            margin: 0 auto 12px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            position: relative;
+            z-index: 2;
+        }
+        .action-icon.broadcast {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+        }
+        .action-icon.manage-tasks {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+        }
+        .action-icon.pending {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+        .action-icon.settings {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+        }
+        .action-label {
+            font-size: 14px;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            margin-bottom: 5px;
+        }
+        .action-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 2;
+        }
+        .recent-activity {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+        }
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .activity-item:hover {
+            background: rgba(0, 242, 255, 0.05);
+            border-color: var(--neon-cyan);
+            transform: translateX(5px);
+        }
+        .activity-item:last-child {
+            margin-bottom: 0;
+        }
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .activity-icon.user {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+        }
+        .activity-icon.withdrawal {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        .activity-icon.task {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .activity-content {
+            flex: 1;
+        }
+        .activity-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        .activity-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        .pending-badge {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--glass-border);
+            padding: 12px 20px 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+        }
+        .nav-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 12px 8px;
+            margin: 0 5px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            text-decoration: none;
+            color: var(--text-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--neon-cyan-glow), transparent);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .nav-btn:active::before {
+            width: 200px;
+            height: 200px;
+        }
+        .nav-btn:hover {
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 8px 25px var(--neon-cyan-glow);
+        }
+        .nav-btn.active {
+            background: rgba(0, 242, 255, 0.15);
+            border-color: var(--neon-cyan);
+            color: var(--neon-cyan);
+            box-shadow: 0 0 25px var(--neon-cyan-glow), inset 0 0 20px rgba(0, 242, 255, 0.1);
+            transform: translateY(-5px);
+        }
+        .nav-icon {
+            font-size: 22px;
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        .nav-btn.active .nav-icon {
+            animation: iconBounce 0.6s ease;
+        }
+        @keyframes iconBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        .nav-label {
+            font-size: 11px;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 80vh;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--glass-border);
+            border-top-color: var(--neon-cyan);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border-radius: 10px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.5);
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        @media (max-width: 380px) {
+            .stats-overview { grid-template-columns: 1fr; }
+            .stat-value { font-size: 24px; }
+            .nav-btn { padding: 10px 5px; margin: 0 3px; }
+            .nav-icon { font-size: 20px; }
+            .nav-label { font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="header">
+        <div class="logo">StreamPerks</div>
+        <div class="admin-badge"><i class="fas fa-shield-halved"></i> Admin</div>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <div class="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading Dashboard...</div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="admin.html" class="nav-btn active">
+            <i class="fas fa-house nav-icon"></i>
+            <span class="nav-label">Home</span>
+        </a>
+        <a href="task.html" class="nav-btn">
+            <i class="fas fa-list-check nav-icon"></i>
+            <span class="nav-label">Tasks</span>
+        </a>
+        <a href="withdrawals.html" class="nav-btn">
+            <i class="fas fa-wallet nav-icon"></i>
+            <span class="nav-label">Withdraw</span>
+            <span class="notification-badge" id="withdrawalBadge" style="display: none;">0</span>
+        </a>
+        <a href="broadcast.html" class="nav-btn">
+            <i class="fas fa-bullhorn nav-icon"></i>
+            <span class="nav-label">Broadcast</span>
+        </a>
+        <a href="settings.html" class="nav-btn">
+            <i class="fas fa-gear nav-icon"></i>
+            <span class="nav-label">Settings</span>
+        </a>
+    </nav>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
+
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Set theme
+        tg.setHeaderColor('#0a0a0f');
+        tg.setBackgroundColor('#0a0a0f');
+
+        // ===== GLOBAL STATE =====
+        let currentUser = null;
+        let dashboardData = {
+            totalUsers: 0,
+            activeTasks: 0,
+            pendingWithdrawals: 0,
+            totalRevenue: 0,
+            newUsersToday: 0,
+            completedTasksToday: 0,
+            withdrawalsToday: 0,
+            recentActivity: []
+        };
+
+        // ===== MAIN INITIALIZATION =====
+        async function init() {
+            try {
+                const telegramUser = tg.initDataUnsafe?.user;
+                
+                if (!telegramUser) {
+                    showError('Telegram user data not available');
+                    return;
+                }
+
+                // Get current user and verify admin status
+                currentUser = await getOrCreateUser(telegramUser);
+                
+                if (!currentUser || currentUser.role !== 'admin') {
+                    showError('Access Denied: Admin privileges required');
+                    return;
+                }
+
+                // Load dashboard data
+                await loadDashboardData();
+                renderDashboard();
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Failed to load dashboard');
+            }
+        }
+
+        // ===== USER MANAGEMENT =====
+        async function getOrCreateUser(telegramUser) {
+            try {
+                // Check if user exists
+                let { data: user, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('telegram_id', telegramUser.id)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+
+                if (!user) {
+                    // Create new user
+                    const { data: newUser, error: insertError } = await supabase
+                        .from('users')
+                        .insert([{
+                            telegram_id: telegramUser.id,
+                            username: telegramUser.username || null,
+                            first_name: telegramUser.first_name || null,
+                            last_name: telegramUser.last_name || null,
+                            photo_url: telegramUser.photo_url || null,
+                            role: 'user'
+                        }])
+                        .select()
+                        .single();
+
+                    if (insertError) throw insertError;
+                    user = newUser;
+                }
+
+                return user;
+            } catch (error) {
+                console.error('Error getting/creating user:', error);
+                return null;
+            }
+        }
+
+        // ===== DATA LOADING =====
+        async function loadDashboardData() {
+            try {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                // Get total users
+                const { count: totalUsers } = await supabase
+                    .from('users')
+                    .select('*', { count: 'exact', head: true });
+
+                // Get active tasks
+                const { count: activeTasks } = await supabase
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('is_active', true);
+
+                // Get pending withdrawals
+                const { count: pendingWithdrawals } = await supabase
+                    .from('withdrawals')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'pending');
+
+                // Get total revenue (total withdrawn)
+                const { data: revenueData } = await supabase
+                    .from('withdrawals')
+                    .select('amount')
+                    .eq('status', 'approved');
+
+                const totalRevenue = revenueData?.reduce((sum, w) => sum + parseFloat(w.amount), 0) || 0;
+
+                // Get new users today
+                const { count: newUsersToday } = await supabase
+                    .from('users')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', today.toISOString());
+
+                // Get completed tasks today
+                const { count: completedTasksToday } = await supabase
+                    .from('user_tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'completed')
+                    .gte('completed_at', today.toISOString());
+
+                // Get withdrawals today
+                const { count: withdrawalsToday } = await supabase
+                    .from('withdrawals')
+                    .select('*', { count: 'exact', head: true })
+                    .gte('created_at', today.toISOString());
+
+                // Get recent activity
+                const { data: recentWithdrawals } = await supabase
+                    .from('withdrawals')
+                    .select(`
+                        *,
+                        users!inner(first_name, username)
+                    `)
+                    .order('created_at', { ascending: false })
+                    .limit(3);
+
+                const { data: recentUsers } = await supabase
+                    .from('users')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(2);
+
+                // Combine and format recent activity
+                const recentActivity = [];
+                
+                if (recentUsers) {
+                    recentUsers.forEach(user => {
+                        recentActivity.push({
+                            type: 'user',
+                            title: `${user.first_name || 'New User'} joined`,
+                            time: formatTimeAgo(user.created_at),
+                            icon: 'fa-user-plus'
+                        });
+                    });
+                }
+
+                if (recentWithdrawals) {
+                    recentWithdrawals.forEach(withdrawal => {
+                        recentActivity.push({
+                            type: 'withdrawal',
+                            title: `${withdrawal.users.first_name || 'User'} requested withdrawal`,
+                            time: formatTimeAgo(withdrawal.created_at),
+                            icon: 'fa-money-bill-wave',
+                            badge: withdrawal.status === 'pending' ? 'Pending' : null
+                        });
+                    });
+                }
+
+                // Sort by most recent
+                recentActivity.sort((a, b) => b.time - a.time);
+
+                dashboardData = {
+                    totalUsers: totalUsers || 0,
+                    activeTasks: activeTasks || 0,
+                    pendingWithdrawals: pendingWithdrawals || 0,
+                    totalRevenue: totalRevenue,
+                    newUsersToday: newUsersToday || 0,
+                    completedTasksToday: completedTasksToday || 0,
+                    withdrawalsToday: withdrawalsToday || 0,
+                    recentActivity: recentActivity.slice(0, 5)
+                };
+
+                // Update withdrawal badge
+                if (pendingWithdrawals > 0) {
+                    const badge = document.getElementById('withdrawalBadge');
+                    if (badge) {
+                        badge.textContent = pendingWithdrawals;
+                        badge.style.display = 'block';
+                    }
+                }
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                throw error;
+            }
+        }
+
+        // ===== RENDERING =====
+        function renderDashboard() {
+            const dashboard = document.getElementById('dashboard');
+            
+            dashboard.innerHTML = `
+                <div class="welcome-card">
+                    <div class="welcome-content">
+                        <div class="welcome-title">Welcome back, Admin! 👋</div>
+                        <div class="welcome-subtitle">Here's what's happening with StreamPerks today</div>
+                    </div>
+                </div>
+
+                <div class="stats-overview">
+                    <div class="stat-card" onclick="window.location.href='users.html'">
+                        <div class="stat-header">
+                            <div class="stat-icon users">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-trend up">
+                                <i class="fas fa-arrow-up"></i> ${dashboardData.newUsersToday}
+                            </div>
+                        </div>
+                                                <div class="stat-value">${formatNumber(dashboardData.totalUsers)}</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+
+                    <div class="stat-card" onclick="window.location.href='task.html'">
+                        <div class="stat-header">
+                            <div class="stat-icon tasks">
+                                <i class="fas fa-list-check"></i>
+                            </div>
+                            <div class="stat-trend up">
+                                <i class="fas fa-arrow-up"></i> ${dashboardData.completedTasksToday}
+                            </div>
+                        </div>
+                        <div class="stat-value">${formatNumber(dashboardData.activeTasks)}</div>
+                        <div class="stat-label">Active Tasks</div>
+                    </div>
+
+                    <div class="stat-card" onclick="window.location.href='withdrawals.html'">
+                        <div class="stat-header">
+                            <div class="stat-icon withdrawals">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-trend ${dashboardData.pendingWithdrawals > 0 ? 'up' : 'down'}">
+                                <i class="fas fa-exclamation-circle"></i> ${dashboardData.pendingWithdrawals}
+                            </div>
+                        </div>
+                        <div class="stat-value">${formatNumber(dashboardData.withdrawalsToday)}</div>
+                        <div class="stat-label">Withdrawals Today</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon revenue">
+                                <i class="fas fa-sack-dollar"></i>
+                            </div>
+                            <div class="stat-trend up">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">$${formatCurrency(dashboardData.totalRevenue)}</div>
+                        <div class="stat-label">Total Paid Out</div>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    Quick Actions
+                </div>
+
+                <div class="quick-actions-grid">
+                    <a href="broadcast.html" class="action-card">
+                        <div class="action-icon broadcast">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                        <div class="action-label">Broadcast</div>
+                        <div class="action-subtitle">Send message to users</div>
+                    </a>
+
+                    <a href="task.html" class="action-card">
+                        <div class="action-icon manage-tasks">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <div class="action-label">Manage Tasks</div>
+                        <div class="action-subtitle">Create & edit tasks</div>
+                    </a>
+
+                    <a href="withdrawals.html" class="action-card">
+                        <div class="action-icon pending">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="action-label">Pending Requests</div>
+                        <div class="action-subtitle">${dashboardData.pendingWithdrawals} waiting</div>
+                    </a>
+
+                    <a href="settings.html" class="action-card">
+                        <div class="action-icon settings">
+                            <i class="fas fa-sliders"></i>
+                        </div>
+                        <div class="action-label">Settings</div>
+                        <div class="action-subtitle">Configure platform</div>
+                    </a>
+                </div>
+
+                <div class="section-title">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    Recent Activity
+                </div>
+
+                <div class="recent-activity">
+                    ${renderRecentActivity()}
+                </div>
+            `;
+
+            // Add haptic feedback for Telegram
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function renderRecentActivity() {
+            if (!dashboardData.recentActivity || dashboardData.recentActivity.length === 0) {
+                return `
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                        <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 10px; opacity: 0.3;"></i>
+                        <p>No recent activity</p>
+                    </div>
+                `;
+            }
+
+            return dashboardData.recentActivity.map(activity => `
+                <div class="activity-item">
+                    <div class="activity-icon ${activity.type}">
+                        <i class="fas ${activity.icon}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">${activity.title}</div>
+                        <div class="activity-time">${activity.time}</div>
+                    </div>
+                    ${activity.badge ? `<div class="pending-badge">${activity.badge}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function formatCurrency(amount) {
+            return parseFloat(amount).toFixed(2);
+        }
+
+        function formatTimeAgo(timestamp) {
+            const now = new Date();
+            const time = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - time) / 1000);
+
+            if (diffInSeconds < 60) {
+                return 'Just now';
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return `$${minutes} minute$$ {minutes > 1 ? 's' : ''} ago`;
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                return `$${hours} hour$$ {hours > 1 ? 's' : ''} ago`;
+            } else if (diffInSeconds < 604800) {
+                const days = Math.floor(diffInSeconds / 86400);
+                return `$${days} day$$ {days > 1 ? 's' : ''} ago`;
+            } else {
+                return time.toLocaleDateString();
+            }
+        }
+
+        function showError(message) {
+            const dashboard = document.getElementById('dashboard');
+            dashboard.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; text-align: center; padding: 20px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: var(--danger); margin-bottom: 20px; opacity: 0.8;"></i>
+                    <h2 style="font-size: 20px; margin-bottom: 10px; color: var(--text-primary);">Oops!</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">${message}</p>
+                    <button onclick="location.reload()" style="background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 12px 24px; border-radius: 12px; color: var(--neon-cyan); font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-rotate-right"></i> Retry
+                    </button>
+                </div>
+            `;
+        }
+
+        // ===== AUTO REFRESH =====
+        let refreshInterval;
+
+        function startAutoRefresh() {
+            // Refresh dashboard data every 30 seconds
+            refreshInterval = setInterval(async () => {
+                try {
+                    await loadDashboardData();
+                    renderDashboard();
+                } catch (error) {
+                    console.error('Auto refresh error:', error);
+                }
+            }, 30000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        }
+
+        // ===== REALTIME SUBSCRIPTIONS =====
+        function setupRealtimeSubscriptions() {
+            // Subscribe to withdrawals changes
+            supabase
+                .channel('withdrawals-changes')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'withdrawals' },
+                    async (payload) => {
+                        console.log('Withdrawal change detected:', payload);
+                        await loadDashboardData();
+                        renderDashboard();
+                        
+                        // Show notification
+                        if (payload.eventType === 'INSERT') {
+                            tg.showPopup({
+                                title: 'New Withdrawal Request',
+                                message: 'A new withdrawal request has been submitted.',
+                                buttons: [{type: 'ok'}]
+                            });
+                            tg.HapticFeedback.notificationOccurred('success');
+                        }
+                    }
+                )
+                .subscribe();
+
+            // Subscribe to new users
+            supabase
+                .channel('users-changes')
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'users' },
+                    async (payload) => {
+                        console.log('New user registered:', payload);
+                        await loadDashboardData();
+                        renderDashboard();
+                        tg.HapticFeedback.impactOccurred('light');
+                    }
+                )
+                .subscribe();
+
+            // Subscribe to task completions
+            supabase
+                .channel('user-tasks-changes')
+                .on('postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'user_tasks' },
+                    async (payload) => {
+                        console.log('Task completed:', payload);
+                        await loadDashboardData();
+                        renderDashboard();
+                    }
+                )
+                .subscribe();
+        }
+
+        // ===== PAGE VISIBILITY =====
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+                // Refresh data when page becomes visible
+                try {
+                    await loadDashboardData();
+                    renderDashboard();
+                } catch (error) {
+                    console.error('Refresh error:', error);
+                }
+            }
+        });
+
+        // ===== TELEGRAM BACK BUTTON =====
+        tg.BackButton.hide();
+
+        // ===== CLEANUP ON UNLOAD =====
+        window.addEventListener('beforeunload', () => {
+            stopAutoRefresh();
+        });
+
+        // ===== START APPLICATION =====
+        window.addEventListener('DOMContentLoaded', async () => {
+            await init();
+            startAutoRefresh();
+            setupRealtimeSubscriptions();
+        });
+
+        // ===== PULL TO REFRESH (Optional) =====
+        let touchStartY = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', e => {
+            touchEndY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', async () => {
+            if (touchEndY > touchStartY + 100 && window.scrollY === 0) {
+                // Pull down detected
+                tg.HapticFeedback.impactOccurred('medium');
+                try {
+                    await loadDashboardData();
+                    renderDashboard();
+                    tg.HapticFeedback.notificationOccurred('success');
+                } catch (error) {
+                    console.error('Refresh error:', error);
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
+        }, { passive: true });
+
+        // ===== EXPORT FOR DEBUGGING =====
+        window.adminDashboard = {
+            supabase,
+            currentUser,
+            dashboardData,
+            refresh: async () => {
+                await loadDashboardData();
+                renderDashboard();
+            }
+        };
+    </script>
+</body>
+</html>
+
+                        
