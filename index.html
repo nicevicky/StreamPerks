@@ -760,7 +760,7 @@
         </a>
     </nav>
     
-    <script>
+<script>
         // Configuration - UPDATE THESE VALUES
         const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
@@ -768,16 +768,13 @@
         
         const tg = window.Telegram.WebApp;
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         let currentUser = null;
-
         function updateLoadingText(text) {
             const loadingText = document.querySelector('.loading-text');
             if (loadingText) {
                 loadingText.textContent = text;
             }
         }
-
         function showReferralNotification(bonusAmount) {
             const notification = document.getElementById('referralNotification');
             const amountEl = document.getElementById('referralBonusAmount');
@@ -790,7 +787,6 @@
                 notification.classList.remove('show');
             }, 5000);
         }
-
         // Update Perk Progress Bar
         function updatePerkProgress(currentBalance) {
             const targetPerks = 10000;
@@ -815,7 +811,6 @@
             document.getElementById('perkTarget').textContent = targetPerks.toLocaleString('en-US');
             document.getElementById('perkPercentage').textContent = percentage.toFixed(1) + '%';
         }
-
         async function getReferralBonus() {
             try {
                 const { data, error } = await supabaseClient
@@ -835,7 +830,6 @@
                 return 5.00;
             }
         }
-
         async function processReferral(newUserId, referrerId) {
             try {
                 // Validate that referrer exists and is not the same as new user
@@ -843,27 +837,22 @@
                     console.log('Invalid referral: same user or no referrer');
                     return null;
                 }
-
                 // Check if referrer exists
                 const { data: referrer, error: referrerError } = await supabaseClient
                     .from('users')
                     .select('telegram_id, username, first_name, balance, total_earned, referral_count')
                     .eq('telegram_id', referrerId)
                     .single();
-
                 if (referrerError || !referrer) {
                     console.error('Referrer not found:', referrerError);
                     return null;
                 }
-
                 // Get referral bonus amount from settings
                 const bonusAmount = await getReferralBonus();
-
                 // Update referrer's balance, total_earned, and referral_count
                 const newBalance = parseFloat(referrer.balance) + bonusAmount;
                 const newTotalEarned = parseFloat(referrer.total_earned) + bonusAmount;
                 const newReferralCount = (referrer.referral_count || 0) + 1;
-
                 const { error: updateError } = await supabaseClient
                     .from('users')
                     .update({
@@ -872,12 +861,10 @@
                         referral_count: newReferralCount
                     })
                     .eq('telegram_id', referrerId);
-
                 if (updateError) {
                     console.error('Error updating referrer:', updateError);
                     return null;
                 }
-
                 // Create transaction record for referrer
                 const { error: transactionError } = await supabaseClient
                     .from('transactions')
@@ -887,25 +874,21 @@
                         type: 'referral_bonus',
                         description: `Referral bonus from user ${newUserId}`
                     }]);
-
                 if (transactionError) {
                     console.error('Error creating transaction:', transactionError);
                 }
-
-                console.log(`Referral processed: User $${newUserId} referred by$$ {referrerId}. Bonus: ${bonusAmount}`);
+                console.log(`Referral processed: User ${newUserId} referred by ${referrerId}. Bonus: ${bonusAmount}`);
                 
                 return {
                     success: true,
                     bonusAmount: bonusAmount,
                     referrerName: referrer.first_name || referrer.username
                 };
-
             } catch (error) {
                 console.error('Error processing referral:', error);
                 return null;
             }
         }
-
         // Navigate to admin page
         function navigateToAdmin() {
             console.log('Admin button clicked - navigating to admin.html');
@@ -927,33 +910,26 @@
                 alert('Error opening admin panel. Please try again.');
             }
         }
-
         async function initApp() {
             try {
                 tg.ready();
                 tg.expand();
                 tg.setHeaderColor('#0a0a0f');
                 tg.setBackgroundColor('#0a0a0f');
-
                 const user = tg.initDataUnsafe?.user;
                 const startParam = tg.initDataUnsafe?.start_param;
-
                 console.log('Start param:', startParam);
                 console.log('User:', user);
-
                 if (!user) {
                     document.getElementById('loadingScreen').innerHTML = '<p style="color: #ff6464;">Please open this app from Telegram.</p>';
                     return;
                 }
-
                 updateLoadingText('Checking user...');
-
                 const { data: existingUser, error } = await supabaseClient
                     .from('users')
                     .select('*')
                     .eq('telegram_id', user.id)
                     .single();
-
                 if (existingUser) {
                     // Existing user
                     currentUser = existingUser;
@@ -980,23 +956,19 @@
                         banned: false,
                         referrer_id: referrerId
                     };
-
                     const { data: createdUser, error: createError } = await supabaseClient
                         .from('users')
                         .insert([newUser])
                         .select()
                         .single();
-
                     if (createError) {
                         console.error('Error creating user:', createError);
                         document.getElementById('loadingScreen').innerHTML = `<p style="color: #ff6464;">Error creating your account: ${createError.message}</p>`;
                         return;
                     }
-
                     if (createdUser) {
                         currentUser = createdUser;
                         localStorage.setItem('userData', JSON.stringify(createdUser));
-
                         // Process referral if referrer exists
                         if (referrerId && referrerId !== user.id) {
                             updateLoadingText('Processing referral bonus...');
@@ -1009,7 +981,6 @@
                                 }, 1000);
                             }
                         }
-
                         // Fetch updated user data
                         const { data: finalUser } = await supabaseClient
                             .from('users')
@@ -1022,17 +993,13 @@
                         return;
                     }
                 }
-
                 if (currentUser.banned) {
                     document.getElementById('loadingScreen').innerHTML = '<p style="color: #ff6464;"><i class="fas fa-ban"></i><br><br>Your account has been banned</p>';
                     return;
                 }
-
                 await loadUserData();
-
                 document.getElementById('loadingScreen').style.display = 'none';
                 document.getElementById('mainContent').style.display = 'block';
-
             } catch (error) {
                 console.error('Error during app initialization:', error);
                 document.getElementById('loadingScreen').style.display = 'flex';
@@ -1049,12 +1016,9 @@
                 `;
             }
         }
-
         async function loadUserData() {
             if (!currentUser) return;
-
             updateLoadingText('Loading dashboard...');
-
             // Show admin button if user is admin OR if user ID matches ADMIN_ID
             if (currentUser.role === 'admin' || currentUser.telegram_id.toString() === ADMIN_ID) {
                 const adminBtn = document.getElementById('adminBtn');
@@ -1071,31 +1035,25 @@
                 
                 console.log('Admin button displayed and click handler attached');
             }
-
             const userName = currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
-
             document.getElementById('userName').textContent = userName;
             document.getElementById('userUsername').textContent = currentUser.username ? '@' + currentUser.username : '';
             document.getElementById('userBalance').textContent = parseFloat(currentUser.balance || 0).toFixed(2);
             document.getElementById('totalEarned').textContent = parseFloat(currentUser.total_earned || 0).toFixed(2);
             document.getElementById('totalWithdrawn').textContent = parseFloat(currentUser.total_withdrawn || 0).toFixed(2);
             document.getElementById('referralCount').textContent = currentUser.referral_count || 0;
-
             const avatarEl = document.getElementById('userAvatar');
             if (currentUser.photo_url) {
                 avatarEl.innerHTML = `<img src="${currentUser.photo_url}" alt="Profile">`;
             } else {
                 avatarEl.innerHTML = userName.charAt(0).toUpperCase();
             }
-
             if (currentUser.verified) {
                 document.getElementById('verifiedBadge').style.display = 'inline-block';
             }
-
             // Update Perk Progress Bar with user's actual balance
             updatePerkProgress(currentUser.balance || 0);
         }
-
         async function updateLastActive(userId) {
             try {
                 await supabaseClient
@@ -1106,10 +1064,8 @@
                 console.error('Error updating last active:', error);
             }
         }
-
         // Initialize app when page loads
         initApp();
     </script>
 </body>
 </html>
-
