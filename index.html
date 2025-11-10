@@ -891,27 +891,7 @@
                 return null;
             }
         }
-        // Navigate to admin page
-        function navigateToAdmin() {
-            console.log('Admin button clicked - navigating to admin.html');
-            try {
-                // Try multiple navigation methods
-                
-                // Method 1: Direct window.location
-                window.location.href = 'admin.html';
-                
-                // Method 2: If Method 1 doesn't work, try with setTimeout
-                setTimeout(() => {
-                    if (window.location.pathname.indexOf('admin.html') === -1) {
-                        window.location.replace('admin.html');
-                    }
-                }, 100);
-                
-            } catch (error) {
-                console.error('Error navigating to admin page:', error);
-                alert('Error opening admin panel. Please try again.');
-            }
-        }
+        
         async function initApp() {
             try {
                 tg.ready();
@@ -1026,7 +1006,7 @@
                 const adminBtn = document.getElementById('adminBtn');
                 adminBtn.style.display = 'inline-block';
                 adminBtn.classList.add('show');
-                
+                                                                                                                                                
                 
                 console.log('Admin button displayed and click handler attached');
             }
