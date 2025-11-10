@@ -574,19 +574,15 @@
         // ===== CONFIGURATION =====
         const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
-
         // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
         // Initialize Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-
         // Set theme
         tg.setHeaderColor('#0a0a0f');
         tg.setBackgroundColor('#0a0a0f');
-
         // ===== GLOBAL STATE =====
         let currentUser = null;
         let dashboardData = {
@@ -599,35 +595,30 @@
             withdrawalsToday: 0,
             recentActivity: []
         };
-
         // ===== MAIN INITIALIZATION =====
         async function init() {
             try {
                 const telegramUser = tg.initDataUnsafe?.user;
-                
+               
                 if (!telegramUser) {
                     showError('Telegram user data not available');
                     return;
                 }
-
                 // Get current user and verify admin status
                 currentUser = await getOrCreateUser(telegramUser);
-                
+               
                 if (!currentUser || currentUser.role !== 'admin') {
                     showError('Access Denied: Admin privileges required');
                     return;
                 }
-
                 // Load dashboard data
                 await loadDashboardData();
                 renderDashboard();
-
             } catch (error) {
                 console.error('Initialization error:', error);
                 showError('Failed to load dashboard');
             }
         }
-
         // ===== USER MANAGEMENT =====
         async function getOrCreateUser(telegramUser) {
             try {
@@ -637,11 +628,9 @@
                     .select('*')
                     .eq('telegram_id', telegramUser.id)
                     .single();
-
                 if (error && error.code !== 'PGRST116') {
                     throw error;
                 }
-
                 if (!user) {
                     // Create new user
                     const { data: newUser, error: insertError } = await supabase
@@ -656,68 +645,56 @@
                         }])
                         .select()
                         .single();
-
                     if (insertError) throw insertError;
                     user = newUser;
                 }
-
                 return user;
             } catch (error) {
                 console.error('Error getting/creating user:', error);
                 return null;
             }
         }
-
         // ===== DATA LOADING =====
         async function loadDashboardData() {
             try {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-
                 // Get total users
                 const { count: totalUsers } = await supabase
                     .from('users')
                     .select('*', { count: 'exact', head: true });
-
                 // Get active tasks
                 const { count: activeTasks } = await supabase
                     .from('tasks')
                     .select('*', { count: 'exact', head: true })
                     .eq('is_active', true);
-
                 // Get pending withdrawals
                 const { count: pendingWithdrawals } = await supabase
                     .from('withdrawals')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'pending');
-
                 // Get total revenue (total withdrawn)
                 const { data: revenueData } = await supabase
                     .from('withdrawals')
                     .select('amount')
                     .eq('status', 'approved');
-
                 const totalRevenue = revenueData?.reduce((sum, w) => sum + parseFloat(w.amount), 0) || 0;
-
                 // Get new users today
                 const { count: newUsersToday } = await supabase
                     .from('users')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', today.toISOString());
-
                 // Get completed tasks today
                 const { count: completedTasksToday } = await supabase
                     .from('user_tasks')
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'completed')
                     .gte('completed_at', today.toISOString());
-
                 // Get withdrawals today
                 const { count: withdrawalsToday } = await supabase
                     .from('withdrawals')
                     .select('*', { count: 'exact', head: true })
                     .gte('created_at', today.toISOString());
-
                 // Get recent activity
                 const { data: recentWithdrawals } = await supabase
                     .from('withdrawals')
@@ -727,16 +704,14 @@
                     `)
                     .order('created_at', { ascending: false })
                     .limit(3);
-
                 const { data: recentUsers } = await supabase
                     .from('users')
                     .select('*')
                     .order('created_at', { ascending: false })
                     .limit(2);
-
                 // Combine and format recent activity
                 const recentActivity = [];
-                
+               
                 if (recentUsers) {
                     recentUsers.forEach(user => {
                         recentActivity.push({
@@ -747,7 +722,6 @@
                         });
                     });
                 }
-
                 if (recentWithdrawals) {
                     recentWithdrawals.forEach(withdrawal => {
                         recentActivity.push({
@@ -759,10 +733,8 @@
                         });
                     });
                 }
-
                 // Sort by most recent
-                recentActivity.sort((a, b) => b.time - a.time);
-
+                recentActivity.sort((a, b) => new Date(b.time) - new Date(a.time));
                 dashboardData = {
                     totalUsers: totalUsers || 0,
                     activeTasks: activeTasks || 0,
@@ -773,7 +745,6 @@
                     withdrawalsToday: withdrawalsToday || 0,
                     recentActivity: recentActivity.slice(0, 5)
                 };
-
                 // Update withdrawal badge
                 if (pendingWithdrawals > 0) {
                     const badge = document.getElementById('withdrawalBadge');
@@ -782,25 +753,22 @@
                         badge.style.display = 'block';
                     }
                 }
-
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 throw error;
             }
         }
-
         // ===== RENDERING =====
         function renderDashboard() {
             const dashboard = document.getElementById('dashboard');
-            
+           
             dashboard.innerHTML = `
                 <div class="welcome-card">
                     <div class="welcome-content">
-                        <div class="welcome-title">Welcome back, Admin! 👋</div>
+                        <div class="welcome-title">Welcome back, Admin!</div>
                         <div class="welcome-subtitle">Here's what's happening with StreamPerks today</div>
                     </div>
                 </div>
-
                 <div class="stats-overview">
                     <div class="stat-card" onclick="window.location.href='users.html'">
                         <div class="stat-header">
@@ -811,10 +779,9 @@
                                 <i class="fas fa-arrow-up"></i> ${dashboardData.newUsersToday}
                             </div>
                         </div>
-                                                <div class="stat-value">${formatNumber(dashboardData.totalUsers)}</div>
+                                        <div class="stat-value">${formatNumber(dashboardData.totalUsers)}</div>
                         <div class="stat-label">Total Users</div>
                     </div>
-
                     <div class="stat-card" onclick="window.location.href='task.html'">
                         <div class="stat-header">
                             <div class="stat-icon tasks">
@@ -827,7 +794,6 @@
                         <div class="stat-value">${formatNumber(dashboardData.activeTasks)}</div>
                         <div class="stat-label">Active Tasks</div>
                     </div>
-
                     <div class="stat-card" onclick="window.location.href='withdrawals.html'">
                         <div class="stat-header">
                             <div class="stat-icon withdrawals">
@@ -840,7 +806,6 @@
                         <div class="stat-value">${formatNumber(dashboardData.withdrawalsToday)}</div>
                         <div class="stat-label">Withdrawals Today</div>
                     </div>
-
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-icon revenue">
@@ -854,12 +819,10 @@
                         <div class="stat-label">Total Paid Out</div>
                     </div>
                 </div>
-
                 <div class="section-title">
                     <i class="fas fa-bolt"></i>
                     Quick Actions
                 </div>
-
                 <div class="quick-actions-grid">
                     <a href="broadcast.html" class="action-card">
                         <div class="action-icon broadcast">
@@ -868,7 +831,6 @@
                         <div class="action-label">Broadcast</div>
                         <div class="action-subtitle">Send message to users</div>
                     </a>
-
                     <a href="task.html" class="action-card">
                         <div class="action-icon manage-tasks">
                             <i class="fas fa-tasks"></i>
@@ -876,7 +838,6 @@
                         <div class="action-label">Manage Tasks</div>
                         <div class="action-subtitle">Create & edit tasks</div>
                     </a>
-
                     <a href="withdrawals.html" class="action-card">
                         <div class="action-icon pending">
                             <i class="fas fa-hourglass-half"></i>
@@ -884,7 +845,6 @@
                         <div class="action-label">Pending Requests</div>
                         <div class="action-subtitle">${dashboardData.pendingWithdrawals} waiting</div>
                     </a>
-
                     <a href="settings.html" class="action-card">
                         <div class="action-icon settings">
                             <i class="fas fa-sliders"></i>
@@ -893,21 +853,17 @@
                         <div class="action-subtitle">Configure platform</div>
                     </a>
                 </div>
-
                 <div class="section-title">
                     <i class="fas fa-clock-rotate-left"></i>
                     Recent Activity
                 </div>
-
                 <div class="recent-activity">
                     ${renderRecentActivity()}
                 </div>
             `;
-
             // Add haptic feedback for Telegram
             tg.HapticFeedback.impactOccurred('light');
         }
-
         function renderRecentActivity() {
             if (!dashboardData.recentActivity || dashboardData.recentActivity.length === 0) {
                 return `
@@ -917,7 +873,6 @@
                     </div>
                 `;
             }
-
             return dashboardData.recentActivity.map(activity => `
                 <div class="activity-item">
                     <div class="activity-icon ${activity.type}">
@@ -931,7 +886,6 @@
                 </div>
             `).join('');
         }
-
         // ===== UTILITY FUNCTIONS =====
         function formatNumber(num) {
             if (num >= 1000000) {
@@ -941,32 +895,28 @@
             }
             return num.toString();
         }
-
         function formatCurrency(amount) {
             return parseFloat(amount).toFixed(2);
         }
-
         function formatTimeAgo(timestamp) {
             const now = new Date();
             const time = new Date(timestamp);
             const diffInSeconds = Math.floor((now - time) / 1000);
-
             if (diffInSeconds < 60) {
                 return 'Just now';
             } else if (diffInSeconds < 3600) {
                 const minutes = Math.floor(diffInSeconds / 60);
-                return `$${minutes} minute$$ {minutes > 1 ? 's' : ''} ago`;
+                return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
             } else if (diffInSeconds < 86400) {
                 const hours = Math.floor(diffInSeconds / 3600);
-                return `$${hours} hour$$ {hours > 1 ? 's' : ''} ago`;
+                return `${hours} hour${hours > 1 ? 's' : ''} ago`;
             } else if (diffInSeconds < 604800) {
                 const days = Math.floor(diffInSeconds / 86400);
-                return `$${days} day$$ {days > 1 ? 's' : ''} ago`;
+                return `${days} day${days > 1 ? 's' : ''} ago`;
             } else {
                 return time.toLocaleDateString();
             }
         }
-
         function showError(message) {
             const dashboard = document.getElementById('dashboard');
             dashboard.innerHTML = `
@@ -980,10 +930,8 @@
                 </div>
             `;
         }
-
         // ===== AUTO REFRESH =====
         let refreshInterval;
-
         function startAutoRefresh() {
             // Refresh dashboard data every 30 seconds
             refreshInterval = setInterval(async () => {
@@ -995,25 +943,23 @@
                 }
             }, 30000);
         }
-
         function stopAutoRefresh() {
             if (refreshInterval) {
                 clearInterval(refreshInterval);
             }
         }
-
         // ===== REALTIME SUBSCRIPTIONS =====
         function setupRealtimeSubscriptions() {
             // Subscribe to withdrawals changes
             supabase
                 .channel('withdrawals-changes')
-                .on('postgres_changes', 
+                .on('postgres_changes',
                     { event: '*', schema: 'public', table: 'withdrawals' },
                     async (payload) => {
                         console.log('Withdrawal change detected:', payload);
                         await loadDashboardData();
                         renderDashboard();
-                        
+                       
                         // Show notification
                         if (payload.eventType === 'INSERT') {
                             tg.showPopup({
@@ -1026,7 +972,6 @@
                     }
                 )
                 .subscribe();
-
             // Subscribe to new users
             supabase
                 .channel('users-changes')
@@ -1040,7 +985,6 @@
                     }
                 )
                 .subscribe();
-
             // Subscribe to task completions
             supabase
                 .channel('user-tasks-changes')
@@ -1054,7 +998,6 @@
                 )
                 .subscribe();
         }
-
         // ===== PAGE VISIBILITY =====
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'visible') {
@@ -1067,34 +1010,27 @@
                 }
             }
         });
-
         // ===== TELEGRAM BACK BUTTON =====
         tg.BackButton.hide();
-
         // ===== CLEANUP ON UNLOAD =====
         window.addEventListener('beforeunload', () => {
             stopAutoRefresh();
         });
-
         // ===== START APPLICATION =====
         window.addEventListener('DOMContentLoaded', async () => {
             await init();
             startAutoRefresh();
             setupRealtimeSubscriptions();
         });
-
         // ===== PULL TO REFRESH (Optional) =====
         let touchStartY = 0;
         let touchEndY = 0;
-
         document.addEventListener('touchstart', e => {
             touchStartY = e.touches[0].clientY;
         }, { passive: true });
-
         document.addEventListener('touchmove', e => {
             touchEndY = e.touches[0].clientY;
         }, { passive: true });
-
         document.addEventListener('touchend', async () => {
             if (touchEndY > touchStartY + 100 && window.scrollY === 0) {
                 // Pull down detected
@@ -1109,7 +1045,6 @@
                 }
             }
         }, { passive: true });
-
         // ===== EXPORT FOR DEBUGGING =====
         window.adminDashboard = {
             supabase,
@@ -1122,6 +1057,4 @@
         };
     </script>
 </body>
-</html>
-
-                        
+</html>                      
