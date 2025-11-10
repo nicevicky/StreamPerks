@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -658,9 +659,10 @@
     
     <div class="header">
         <div class="logo">StreamPerks</div>
-        <button class="admin-btn" id="adminBtn" style="display: none;">
-            <i class="fas fa-shield-halved"></i> Admin
-        </button>
+        <button class="admin-btn" id="adminBtn" onclick="window.location.href='admin.html'" style="display: none;">
+    <i class="fas fa-shield-halved"></i> Admin
+</button>
+
     </div>
     
     <div class="dashboard">
@@ -1025,13 +1027,6 @@
                 adminBtn.style.display = 'inline-block';
                 adminBtn.classList.add('show');
                 
-                // Add click event listener to admin button
-                adminBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Admin button clicked!');
-                    navigateToAdmin();
-                });
                 
                 console.log('Admin button displayed and click handler attached');
             }
