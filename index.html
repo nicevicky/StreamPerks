@@ -95,12 +95,15 @@
             text-decoration: none;
         }
         .admin-btn.show {
-            display: block;
+            display: inline-block;
         }
         .admin-btn:hover {
             background: rgba(0, 242, 255, 0.1);
             box-shadow: 0 0 20px var(--neon-cyan-glow);
             transform: translateY(-2px);
+        }
+        .admin-btn:active {
+            transform: translateY(0);
         }
         .dashboard {
             padding: 20px;
@@ -653,10 +656,9 @@
     
     <div class="header">
         <div class="logo">StreamPerks</div>
-        <button class="admin-button" id="adminBtn" onclick="window.location.href='admin.html'">
-    <i class="fas fa-shield-alt"></i> Admin Panel
-</button>
-
+        <a href="admin.html" class="admin-btn" id="adminBtn">
+            <i class="fas fa-shield-halved"></i> Admin
+        </a>
     </div>
     
     <div class="dashboard">
@@ -739,15 +741,14 @@
     </div>
     
     <nav class="bottom-nav">
-        <a href="index.html" class="nav-btn active">
-            <i class="fas fa-house nav-icon"></i>
+        <a href="index.html" class="nav-btn active"><i class="fas fa-house nav-icon"></i>
             <span class="nav-label">Home</span>
         </a>
         <a href="tasks.html" class="nav-btn">
             <i class="fas fa-list-check nav-icon"></i>
             <span class="nav-label">Tasks</span>
         </a>
-                <a href="withdraw.html" class="nav-btn">
+        <a href="withdraw.html" class="nav-btn">
             <i class="fas fa-wallet nav-icon"></i>
             <span class="nav-label">Withdraw</span>
         </a>
@@ -1032,7 +1033,9 @@
 
             // Show admin button if user is admin OR if user ID matches ADMIN_ID
             if (currentUser.role === 'admin' || currentUser.telegram_id.toString() === ADMIN_ID) {
-                document.getElementById('adminBtn').classList.add('show');
+                const adminBtn = document.getElementById('adminBtn');
+                adminBtn.classList.add('show');
+                console.log('Admin button displayed');
             }
 
             const userName = currentUser.first_name + (currentUser.last_name ? ' ' + currentUser.last_name : '');
@@ -1074,3 +1077,5 @@
     </script>
 </body>
 </html>
+
+            
