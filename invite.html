@@ -993,19 +993,17 @@
         const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
         const TELEGRAM_BOT_USERNAME = 'StreamPerksBot'; // Without @
-        
+
         // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
+
         // Initialize Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-
         let currentUser = null;
         let referralBonusAmount = 0;
         let currentTab = 'invite';
-
         // Milestone rewards configuration
         const MILESTONES = [
             { target: 10, pex: 2000, usdt: 0.2 },
@@ -1015,7 +1013,6 @@
             { target: 200, pex: 60000, usdt: 6 },
             { target: 300, pex: 100000, usdt: 10 }
         ];
-
         // ==========================================
         // TAB SWITCHING
         // ==========================================
@@ -1027,25 +1024,21 @@
                 tab.classList.remove('active');
             });
             event.target.closest('.tab').classList.add('active');
-
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             document.getElementById(`${tabName}Tab`).classList.add('active');
-
             // Load tab-specific data
             if (tabName === 'leaderboard') {
                 loadLeaderboard();
             } else if (tabName === 'milestones') {
                 loadMilestones();
             }
-
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
             }
         }
-
         // ==========================================
         // INITIALIZATION
         // ==========================================
@@ -1055,14 +1048,12 @@
                 console.error('CRITICAL: Bot username not configured');
                 return;
             }
-
             await initializeUser();
             await loadBonusSettings();
             generateInviteLink();
             await loadUserStats();
             await loadReferredUsers();
         });
-
         // ==========================================
         // USER INITIALIZATION
         // ==========================================
@@ -1077,19 +1068,17 @@
                 
                 currentUser = user;
                 console.log('Current user initialized:', currentUser.id);
-                
+
                 // Check if user exists in database
                 const { data: existingUser, error } = await supabase
                     .from('users')
                     .select('*')
                     .eq('telegram_id', user.id)
                     .single();
-
                 if (error && error.code !== 'PGRST116') {
                     console.error('Error fetching user:', error);
                     return;
                 }
-
                 if (!existingUser) {
                     // Create new user and check for referrer
                     const newUser = await createUser(user);
@@ -1107,7 +1096,6 @@
                 showMessage('Failed to initialize user', 'error');
             }
         }
-
         // ==========================================
         // CREATE NEW USER
         // ==========================================
@@ -1130,7 +1118,6 @@
                     }])
                     .select()
                     .single();
-
                 if (error) {
                     console.error('Error creating user:', error);
                     throw error;
@@ -1143,7 +1130,6 @@
                 return null;
             }
         }
-
         // ==========================================
         // LOAD BONUS SETTINGS
         // ==========================================
@@ -1155,7 +1141,6 @@
                     .select('setting_value')
                     .eq('setting_key', 'referral_bonus')
                     .single();
-
                 if (!referralError && referralData) {
                     referralBonusAmount = parseFloat(referralData.setting_value) || 1;
                 } else {
@@ -1168,7 +1153,6 @@
                 referralBonusAmount = 1;
             }
         }
-
         // ==========================================
         // GENERATE INVITE LINK
         // ==========================================
@@ -1179,14 +1163,12 @@
             document.getElementById('inviteLink').textContent = inviteLink;
             console.log('Invite link generated:', inviteLink);
         }
-
         // ==========================================
         // COPY INVITE LINK
         // ==========================================
         async function copyInviteLink() {
             const inviteLink = document.getElementById('inviteLink').textContent;
             if (inviteLink === 'Loading...') return;
-
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(inviteLink);
@@ -1200,7 +1182,6 @@
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
                 }
-
                 showMessage('Invite link copied to clipboard!', 'success');
                 
                 if (tg.HapticFeedback) {
@@ -1211,27 +1192,22 @@
                 showMessage('Failed to copy link', 'error');
             }
         }
-
         // ==========================================
         // SHARE INVITE LINK
         // ==========================================
         function shareInviteLink() {
             const inviteLink = document.getElementById('inviteLink').textContent;
             if (inviteLink === 'Loading...') return;
-
             const shareText = `Join me on StreamPerks and start earning rewards!\n\nGet bonus Perks when you sign up using my link!\n\n`;
-
             if (tg.openTelegramLink) {
                 tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
             } else {
                 window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`, '_blank');
             }
-
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('medium');
             }
         }
-
         // ==========================================
         // CHECK FOR REFERRER
         // ==========================================
@@ -1244,7 +1220,6 @@
                     console.log('No start param or current user');
                     return;
                 }
-
                 const referrerId = parseInt(startParam);
                 console.log('Referrer ID:', referrerId, 'Current User ID:', currentUser.id);
                 
@@ -1253,76 +1228,63 @@
                     console.log('Self-referral detected, ignoring');
                     return;
                 }
-
                 // Check if current user already has a referrer
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('referrer_id, balance, total_earned')
                     .eq('telegram_id', currentUser.id)
                     .single();
-
                 if (userError) {
                     console.error('Error fetching user data:', userError);
                     throw userError;
                 }
                 
                 console.log('Current user data:', userData);
-
                 // If user already has a referrer, don't process again
                 if (userData.referrer_id) {
                     console.log('User already has a referrer:', userData.referrer_id);
                     return;
                 }
-
                 // Verify referrer exists
                 const { data: referrerData, error: referrerCheckError } = await supabase
                     .from('users')
                     .select('telegram_id')
                     .eq('telegram_id', referrerId)
                     .single();
-
                 if (referrerCheckError || !referrerData) {
                     console.log('Referrer not found in database:', referrerId);
                     return;
                 }
-
                 console.log('Setting referrer (pending qualification):', referrerId);
                 await setReferrer(referrerId);
             } catch (error) {
                 console.error('Error checking referrer:', error);
             }
         }
-
         // ==========================================
         // SET REFERRER (without immediate reward)
         // ==========================================
         async function setReferrer(referrerId) {
             try {
                 console.log('Setting referrer for user:', currentUser.id);
-
                 // Step 1: Update current user's referrer_id only
                 const { error: updateError } = await supabase
                     .from('users')
                     .update({ referrer_id: referrerId })
                     .eq('telegram_id', currentUser.id);
-
                 if (updateError) {
                     console.error('Error updating referrer_id:', updateError);
                     throw updateError;
                 }
                 console.log('Referrer set successfully. Awaiting ad watch qualification.');
-
                 showMessage('Welcome! Watch your first ad to qualify your referrer for rewards!', 'success');
-
                 // Reload stats
                 await loadUserStats();
-
             } catch (error) {
                 console.error('Error setting referrer:', error);
                 showMessage('Error processing referral', 'error');
             }
         }
-
         // ==========================================
         // COUNT QUALIFIED REFERRALS
         // ==========================================
@@ -1333,13 +1295,10 @@
                     .from('users')
                     .select('telegram_id')
                     .eq('referrer_id', userId);
-
                 if (refError) throw refError;
-
                 if (!referrals || referrals.length === 0) {
                     return 0;
                 }
-
                 // Check which referrals have watched at least 1 ad
                 let qualifiedCount = 0;
                 for (const referral of referrals) {
@@ -1348,47 +1307,39 @@
                         .select('id')
                         .eq('user_id', referral.telegram_id)
                         .limit(1);
-
                     if (!adError && adWatches && adWatches.length > 0) {
                         qualifiedCount++;
                     }
                 }
-
                 return qualifiedCount;
             } catch (error) {
                 console.error('Error counting qualified referrals:', error);
                 return 0;
             }
         }
-
         // ==========================================
         // LOAD USER STATS
         // ==========================================
         async function loadUserStats() {
             try {
                 if (!currentUser) return;
-
                 const { data, error } = await supabase
                     .from('users')
                     .select('referral_count, balance, total_earned')
                     .eq('telegram_id', currentUser.id)
                     .single();
-
                 if (error) {
                     console.error('Error loading user stats:', error);
                     throw error;
                 }
-
                 // Count qualified referrals
                 const qualifiedCount = await countQualifiedReferrals(currentUser.id);
-
                 console.log('User stats loaded:', data, 'Qualified:', qualifiedCount);
                 updateStatsDisplay(data, qualifiedCount);
             } catch (error) {
                 console.error('Error in loadUserStats:', error);
             }
         }
-
         // ==========================================
         // UPDATE STATS DISPLAY
         // ==========================================
@@ -1401,27 +1352,22 @@
             
             console.log('Stats updated - Total:', totalReferrals, 'Qualified:', qualifiedCount);
         }
-
         // ==========================================
         // LOAD REFERRED USERS
         // ==========================================
         async function loadReferredUsers() {
             try {
                 if (!currentUser) return;
-
                 console.log('Loading referred users for:', currentUser.id);
-
                 const { data, error } = await supabase
                     .from('users')
                     .select('telegram_id, username, first_name, last_name, photo_url, created_at')
                     .eq('referrer_id', currentUser.id)
                     .order('created_at', { ascending: false });
-
                 if (error) {
                     console.error('Error loading referred users:', error);
                     throw error;
                 }
-
                 console.log('Referred users count:', data?.length || 0);
                 await displayReferredUsers(data);
             } catch (error) {
@@ -1435,13 +1381,11 @@
                 `;
             }
         }
-
         // ==========================================
         // DISPLAY REFERRED USERS
         // ==========================================
         async function displayReferredUsers(users) {
             const container = document.getElementById('referredUsersContainer');
-
             if (!users || users.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1452,31 +1396,27 @@
                 `;
                 return;
             }
-
             let html = '<div class="user-list">';
             for (const user of users) {
                 const displayName = user.first_name || user.username || 'User';
                 const initial = displayName.charAt(0).toUpperCase();
                 const joinDate = formatDate(user.created_at);
-
                 // Check if user has watched at least 1 ad
                 const { data: adWatches, error: adError } = await supabase
                     .from('user_ads')
                     .select('id')
                     .eq('user_id', user.telegram_id)
                     .limit(1);
-
                 const isQualified = !adError && adWatches && adWatches.length > 0;
                 const statusClass = isQualified ? 'qualified' : 'pending';
                 const statusIndicator = isQualified ? 'qualified' : 'pending';
                 const bonusStatus = isQualified ? 'earned' : 'pending';
                 const bonusText = isQualified ? `+${referralBonusAmount}` : 'Pending';
-
                 html += `
                     <div class="user-item ${statusClass}">
                         <div class="user-avatar">
-                            ${user.photo_url ? 
-                                `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}">` : 
+                            ${user.photo_url ?
+                                `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}">` :
                                 `<span>${escapeHtml(initial)}</span>`
                             }
                             <div class="status-indicator ${statusIndicator}"></div>
@@ -1497,7 +1437,6 @@
             html += '</div>';
             container.innerHTML = html;
         }
-
         // ==========================================
         // LOAD LEADERBOARD
         // ==========================================
@@ -1510,16 +1449,13 @@
                         <p>Loading leaderboard...</p>
                     </div>
                 `;
-
                 // Get all users with their referral counts
                 const { data: users, error } = await supabase
                     .from('users')
                     .select('telegram_id, username, first_name, photo_url, referral_count')
                     .order('referral_count', { ascending: false })
                     .limit(50);
-
                 if (error) throw error;
-
                 // Calculate qualified referrals for each user
                 const leaderboardData = [];
                 for (const user of users) {
@@ -1531,10 +1467,8 @@
                         });
                     }
                 }
-
                 // Sort by qualified count
                 leaderboardData.sort((a, b) => b.qualifiedCount - a.qualifiedCount);
-
                 displayLeaderboard(leaderboardData.slice(0, 50));
             } catch (error) {
                 console.error('Error loading leaderboard:', error);
@@ -1547,13 +1481,11 @@
                 `;
             }
         }
-
         // ==========================================
         // DISPLAY LEADERBOARD
         // ==========================================
         function displayLeaderboard(leaders) {
             const container = document.getElementById('leaderboardContainer');
-
             if (!leaders || leaders.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1564,14 +1496,12 @@
                 `;
                 return;
             }
-
             let html = '<div class="leaderboard-list">';
             leaders.forEach((leader, index) => {
                 const rank = index + 1;
                 const displayName = leader.first_name || leader.username || 'User';
                 const initial = displayName.charAt(0).toUpperCase();
                 const isCurrentUser = currentUser && leader.telegram_id === currentUser.id;
-
                 let rankBadgeClass = 'regular';
                 let rankDisplay = `#${rank}`;
                 if (rank === 1) {
@@ -1584,18 +1514,17 @@
                     rankBadgeClass = 'bronze';
                     rankDisplay = '<i class="fas fa-award"></i>';
                 }
-
                 html += `
                     <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
                         <div class="rank-badge ${rankBadgeClass}">${rankDisplay}</div>
                         <div class="leader-avatar">
-                            ${leader.photo_url ? 
-                                `<img src="${leader.photo_url}" alt="${escapeHtml(displayName)}">` : 
+                            ${leader.photo_url ?
+                                `<img src="${leader.photo_url}" alt="${escapeHtml(displayName)}">` :
                                 `<span>${escapeHtml(initial)}</span>`
                             }
                         </div>
                         <div class="leader-info">
-                            <div class="leader-name">$${escapeHtml(displayName)}$$ {isCurrentUser ? ' (You)' : ''}</div>
+                            <div class="leader-name">${escapeHtml(displayName)}${isCurrentUser ? ' (You)' : ''}</div>
                             <div class="leader-stats">Qualified Referrals</div>
                         </div>
                         <div class="leader-count">
@@ -1608,7 +1537,6 @@
             html += '</div>';
             container.innerHTML = html;
         }
-
         // ==========================================
         // LOAD MILESTONES
         // ==========================================
@@ -1621,18 +1549,14 @@
                         <p>Loading milestones...</p>
                     </div>
                 `;
-
                 if (!currentUser) return;
-
                 // Get user's qualified referral count
                 const qualifiedCount = await countQualifiedReferrals(currentUser.id);
-
                 // Get claimed milestones from settings
                 const { data: claimedData, error: claimedError } = await supabase
                     .from('settings')
                     .select('setting_value')
                     .eq('setting_key', `milestone_claimed_${currentUser.id}`);
-
                 let claimedMilestones = [];
                 if (!claimedError && claimedData && claimedData.length > 0) {
                     try {
@@ -1641,7 +1565,6 @@
                         claimedMilestones = [];
                     }
                 }
-
                 // Calculate total milestone earnings
                 let totalMilestoneEarnings = 0;
                 claimedMilestones.forEach(target => {
@@ -1650,9 +1573,7 @@
                         totalMilestoneEarnings += milestone.pex;
                     }
                 });
-
                 document.getElementById('milestoneEarnings').textContent = totalMilestoneEarnings.toLocaleString();
-
                 displayMilestones(qualifiedCount, claimedMilestones);
             } catch (error) {
                 console.error('Error loading milestones:', error);
@@ -1660,25 +1581,23 @@
                     <div class="empty-state">
                         <i class="fas fa-exclamation-circle"></i>
                         <h3>Error Loading Milestones</h3>
-                        <p>Please try again later</p>
+                        <p>Please tryystem again later</p>
                     </div>
                 `;
             }
         }
-
         // ==========================================
         // DISPLAY MILESTONES
         // ==========================================
         function displayMilestones(qualifiedCount, claimedMilestones) {
             const container = document.getElementById('milestonesContainer');
-
             let html = '';
             MILESTONES.forEach(milestone => {
                 const progress = Math.min((qualifiedCount / milestone.target) * 100, 100);
                 const isClaimed = claimedMilestones.includes(milestone.target);
                 const isCompleted = qualifiedCount >= milestone.target;
                 const canClaim = isCompleted && !isClaimed;
-                                let statusClass = 'pending';
+                let statusClass = 'pending';
                 let statusHTML = '';
                 
                 if (isClaimed) {
@@ -1686,15 +1605,14 @@
                     statusHTML = '<div class="milestone-status claimed"><i class="fas fa-check-circle"></i> Claimed</div>';
                 } else if (canClaim) {
                     statusClass = 'completed';
-                    statusHTML = `<button class="claim-btn" onclick="claimMilestone($${milestone.target},$$ {milestone.pex})">
+                    statusHTML = `<button class="claim-btn" onclick="claimMilestone(${milestone.target}, ${milestone.pex})">
                         <i class="fas fa-gift"></i> Claim Reward
                     </button>`;
                 } else {
                     statusHTML = `<div class="milestone-status pending">
-                        <i class="fas fa-hourglass-half"></i> $${qualifiedCount}/$$ {milestone.target} Qualified
+                        <i class="fas fa-hourglass-half"></i> ${qualifiedCount}/${milestone.target} Qualified
                     </div>`;
                 }
-
                 html += `
                     <div class="milestone-item ${statusClass}">
                         <div class="milestone-header">
@@ -1713,21 +1631,17 @@
                     </div>
                 `;
             });
-
             container.innerHTML = html;
         }
-
         // ==========================================
         // CLAIM MILESTONE
         // ==========================================
         async function claimMilestone(target, pexReward) {
             try {
                 if (!currentUser) return;
-
                 // Disable button to prevent double-claiming
                 event.target.disabled = true;
                 event.target.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Claiming...';
-
                 // Verify user has enough qualified referrals
                 const qualifiedCount = await countQualifiedReferrals(currentUser.id);
                 if (qualifiedCount < target) {
@@ -1736,13 +1650,11 @@
                     event.target.innerHTML = '<i class="fas fa-gift"></i> Claim Reward';
                     return;
                 }
-
                 // Get claimed milestones
                 const { data: claimedData, error: claimedError } = await supabase
                     .from('settings')
                     .select('setting_value')
                     .eq('setting_key', `milestone_claimed_${currentUser.id}`);
-
                 let claimedMilestones = [];
                 if (!claimedError && claimedData && claimedData.length > 0) {
                     try {
@@ -1751,7 +1663,6 @@
                         claimedMilestones = [];
                     }
                 }
-
                 // Check if already claimed
                 if (claimedMilestones.includes(target)) {
                     showMessage('Milestone already claimed!', 'error');
@@ -1759,20 +1670,16 @@
                     event.target.innerHTML = '<i class="fas fa-gift"></i> Claim Reward';
                     return;
                 }
-
                 // Get user's current balance
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('balance, total_earned')
                     .eq('telegram_id', currentUser.id)
                     .single();
-
                 if (userError) throw userError;
-
                 // Update user balance
                 const newBalance = (parseFloat(userData.balance) || 0) + pexReward;
                 const newTotalEarned = (parseFloat(userData.total_earned) || 0) + pexReward;
-
                 const { error: updateError } = await supabase
                     .from('users')
                     .update({
@@ -1780,9 +1687,7 @@
                         total_earned: newTotalEarned
                     })
                     .eq('telegram_id', currentUser.id);
-
                 if (updateError) throw updateError;
-
                 // Create transaction
                 const { error: transactionError } = await supabase
                     .from('transactions')
@@ -1792,11 +1697,9 @@
                         amount: pexReward,
                         description: `Milestone reward for ${target} qualified referrals`
                     }]);
-
                 if (transactionError) {
                     console.error('Error creating transaction:', transactionError);
                 }
-
                 // Update claimed milestones
                 claimedMilestones.push(target);
                 
@@ -1816,17 +1719,14 @@
                             description: `Claimed milestones for user ${currentUser.id}`
                         }]);
                 }
-
                 showMessage(`Successfully claimed ${pexReward.toLocaleString()} PEX!`, 'success');
                 
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('success');
                 }
-
                 // Reload milestones and stats
                 await loadMilestones();
                 await loadUserStats();
-
             } catch (error) {
                 console.error('Error claiming milestone:', error);
                 showMessage('Failed to claim milestone. Please try again.', 'error');
@@ -1834,7 +1734,6 @@
                 event.target.innerHTML = '<i class="fas fa-gift"></i> Claim Reward';
             }
         }
-
         // ==========================================
         // SHOW MESSAGE
         // ==========================================
@@ -1848,12 +1747,10 @@
                     <span>${text}</span>
                 </div>
             `;
-
             setTimeout(() => {
                 container.innerHTML = '';
             }, 5000);
         }
-
         // ==========================================
         // FORMAT DATE
         // ==========================================
@@ -1862,48 +1759,45 @@
             const now = new Date();
             const diffTime = Math.abs(now - date);
             const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
             if (diffDays === 0) {
                 const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
                 if (diffHours === 0) {
                     const diffMinutes = Math.floor(diffTime / (1000 * 60));
-                    return `$${diffMinutes} min$$ {diffMinutes !== 1 ? 's' : ''} ago`;
+                    return `${diffMinutes} min${diffMinutes !== 1 ? 's' : ''} ago`;
                 }
-                return `$${diffHours} hour$$ {diffHours !== 1 ? 's' : ''} ago`;
+                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
             } else if (diffDays === 1) {
                 return 'Yesterday';
             } else if (diffDays < 7) {
                 return `${diffDays} days ago`;
             } else if (diffDays < 30) {
                 const weeks = Math.floor(diffDays / 7);
-                return `$${weeks} week$$ {weeks !== 1 ? 's' : ''} ago`;
+                return `${weeks} week${weeks !== 1 ? 's' : ''} ago`;
             } else if (diffDays < 365) {
                 const months = Math.floor(diffDays / 30);
-                return `$${months} month$$ {months !== 1 ? 's' : ''} ago`;
+                return `${months} month${months !== 1 ? 's' : ''} ago`;
             } else {
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
+                return date.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
                 });
             }
         }
-
         // ==========================================
         // ESCAPE HTML (XSS Prevention)
         // ==========================================
         function escapeHtml(text) {
             if (typeof text !== 'string') return '';
             const map = {
-                '&': '&',
-                '<': '<',
-                '>': '>',
-                '"': '"',
-                "'": '''
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
             };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
-
         // ==========================================
         // REFRESH DATA PERIODICALLY
         // ==========================================
