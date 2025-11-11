@@ -91,6 +91,7 @@
         .header h1 i {
             color: var(--neon-cyan);
             filter: drop-shadow(0 0 15px var(--neon-cyan-glow));
+            -webkit-text-fill-color: var(--neon-cyan);
         }
         .header p {
             color: var(--text-secondary);
@@ -259,35 +260,57 @@
             box-shadow: 0 0 20px var(--neon-cyan-glow);
         }
         .rank-badge {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 18px;
             font-weight: 800;
             flex-shrink: 0;
+            position: relative;
         }
         .rank-badge.gold {
             background: linear-gradient(135deg, var(--gold), #ffa500);
             color: #000;
             box-shadow: 0 4px 15px rgba(255, 215, 0, 0.5);
         }
+        .rank-badge.gold::after {
+            content: '👑';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 20px;
+        }
         .rank-badge.silver {
             background: linear-gradient(135deg, var(--silver), #999);
             color: #000;
             box-shadow: 0 4px 15px rgba(192, 192, 192, 0.5);
+        }
+        .rank-badge.silver::after {
+            content: '🥈';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 18px;
         }
         .rank-badge.bronze {
             background: linear-gradient(135deg, var(--bronze), #b8860b);
             color: #000;
             box-shadow: 0 4px 15px rgba(205, 127, 50, 0.5);
         }
+        .rank-badge.bronze::after {
+            content: '🥉';
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            font-size: 18px;
+        }
         .rank-badge.regular {
             background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            color: var(--text-secondary);
+            border: 2px solid var(--glass-border);
+            color: var(--text-primary);
         }
         .leader-avatar {
             width: 55px;
@@ -301,6 +324,7 @@
             font-weight: 700;
             box-shadow: 0 4px 15px var(--neon-cyan-glow);
             flex-shrink: 0;
+            border: 3px solid rgba(255, 255, 255, 0.1);
         }
         .leader-avatar img {
             width: 100%;
@@ -310,11 +334,15 @@
         }
         .leader-info {
             flex: 1;
+            min-width: 0;
         }
         .leader-name {
             font-weight: 600;
             font-size: 15px;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .leader-stats {
             font-size: 12px;
@@ -325,8 +353,13 @@
             color: var(--neon-cyan);
             font-size: 18px;
             display: flex;
-            align-items: center;
-            gap: 6px;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .leader-count i {
+            font-size: 14px;
         }
 
         /* Current User Milestone Display in Leaderboard */
@@ -349,42 +382,43 @@
         }
         .milestone-compact {
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .milestone-header {
+            display: flex;
             justify-content: space-between;
-            gap: 15px;
+            align-items: center;
+            gap: 10px;
         }
-        .milestone-progress-compact {
-            flex: 1;
+        .milestone-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
         }
-        .milestone-progress-compact .milestone-text {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
+        .milestone-reward {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffc107;
+            white-space: nowrap;
         }
-        .milestone-progress {
+        .milestone-progress-bar {
             height: 8px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
             overflow: hidden;
         }
-        .milestone-progress-bar {
+        .milestone-progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--neon-cyan), #9333ea);
             border-radius: 10px;
             transition: width 0.5s ease;
             box-shadow: 0 0 10px var(--neon-cyan-glow);
         }
-        .milestone-reward-compact {
-            text-align: right;
-        }
-        .milestone-reward-compact .reward-amount {
-            font-size: 18px;
-            font-weight: 700;
-            color: #ffc107;
-        }
-        .milestone-reward-compact .reward-label {
-            font-size: 11px;
+        .milestone-progress-text {
+            font-size: 12px;
             color: var(--text-secondary);
+            text-align: center;
         }
 
         /* Milestones Tab */
@@ -421,12 +455,16 @@
             color: #ffc107;
             filter: drop-shadow(0 0 10px rgba(255, 193, 7, 0.5));
         }
+        .milestones-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
         .milestone-item {
             background: rgba(0, 0, 0, 0.3);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
             padding: 20px;
-            margin-bottom: 15px;
             position: relative;
             overflow: hidden;
             transition: all 0.3s ease;
@@ -443,28 +481,31 @@
             opacity: 0.6;
             background: rgba(100, 100, 100, 0.1);
         }
+        .milestone-item.locked {
+            opacity: 0.7;
+        }
+        .milestone-icon {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 32px;
+            opacity: 0.3;
+        }
+        .milestone-content {
+            position: relative;
+        }
         .milestone-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 12px;
+            gap: 10px;
         }
-        .milestone-target {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--neon-cyan);
-        }
-        .milestone-reward {
+        .milestone-header h3 {
             font-size: 16px;
             font-weight: 700;
-            color: #ffc107;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .milestone-text {
-            font-size: 13px;
-            color: var(--text-secondary);
+            color: var(--neon-cyan);
+            margin: 0;
         }
         .milestone-status {
             display: inline-flex;
@@ -474,13 +515,13 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
-            margin-top: 10px;
+            white-space: nowrap;
         }
-        .milestone-status.pending {
+        .milestone-status.locked {
             background: rgba(255, 193, 7, 0.2);
             color: #ffc107;
         }
-        .milestone-status.ready {
+        .milestone-status.completed {
             background: rgba(40, 167, 69, 0.2);
             color: var(--success-color);
         }
@@ -488,7 +529,20 @@
             background: rgba(100, 100, 100, 0.2);
             color: var(--text-secondary);
         }
-        .claim-btn {
+        .milestone-reward-display {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .milestone-reward-display span {
+            color: #ffc107;
+            font-weight: 600;
+        }
+        .milestone-reward-display i {
+            margin-right: 4px;
+        }
+        .milestone-claim-btn {
             width: 100%;
             padding: 12px;
             font-size: 14px;
@@ -501,12 +555,16 @@
             margin-top: 12px;
             transition: all 0.3s ease;
             font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
-        .claim-btn:hover {
+        .milestone-claim-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(40, 167, 69, 0.5);
         }
-        .claim-btn:disabled {
+        .milestone-claim-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
@@ -693,6 +751,7 @@
             box-shadow: 0 4px 15px var(--neon-cyan-glow);
             flex-shrink: 0;
             position: relative;
+            border: 3px solid rgba(255, 255, 255, 0.1);
         }
         .user-avatar img {
             width: 100%;
@@ -717,11 +776,15 @@
         }
         .user-info {
             flex: 1;
+            min-width: 0;
         }
         .user-name {
             font-weight: 600;
             font-size: 15px;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .user-date {
             font-size: 12px;
@@ -735,12 +798,14 @@
             flex-direction: column;
             align-items: flex-end;
             gap: 4px;
+            flex-shrink: 0;
         }
         .bonus-status {
             font-size: 11px;
             padding: 4px 8px;
             border-radius: 10px;
             font-weight: 600;
+            white-space: nowrap;
         }
         .bonus-status.earned {
             background: rgba(40, 167, 69, 0.2);
@@ -789,6 +854,7 @@
             gap: 12px;
             animation: slideIn 0.3s ease;
             backdrop-filter: blur(12px);
+            margin-bottom: 10px;
         }
         .message.success {
             background: rgba(40, 167, 69, 0.2);
@@ -839,7 +905,7 @@
             padding: 12px 8px;
             margin: 0 5px;
             cursor: pointer;
-                        transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             text-decoration: none;
             color: var(--text-secondary);
             position: relative;
@@ -1040,17 +1106,25 @@
         const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
         const TELEGRAM_BOT_USERNAME = 'StreamPerksBot'; // Without @
+
         // Initialize Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // Initialize Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
-       
+      
         let currentUser = null;
         let referralBonusAmount = 0;
         let currentTab = 'invite';
-       
+
+        // Cache for performance
+        let cachedStats = null;
+        let cachedLeaderboard = null;
+        let cacheTimestamp = null;
+        const CACHE_DURATION = 30000; // 30 seconds
+
         // Milestone rewards configuration
         const MILESTONES = [
             { target: 10, pex: 2000, usdt: 0.2 },
@@ -1060,35 +1134,37 @@
             { target: 200, pex: 60000, usdt: 6 },
             { target: 300, pex: 100000, usdt: 10 }
         ];
+
         // ==========================================
         // TAB SWITCHING
         // ==========================================
         function switchTab(tabName) {
             currentTab = tabName;
-           
+          
             // Update tab buttons
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
             event.target.closest('.tab').classList.add('active');
-           
+          
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             document.getElementById(`${tabName}Tab`).classList.add('active');
-           
+          
             // Load tab-specific data
             if (tabName === 'leaderboard') {
                 loadLeaderboard();
             } else if (tabName === 'milestones') {
                 loadMilestones();
             }
-           
+          
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('light');
             }
         }
+
         // ==========================================
         // INITIALIZATION
         // ==========================================
@@ -1098,36 +1174,41 @@
                 console.error('CRITICAL: Bot username not configured');
                 return;
             }
+           
             await initializeUser();
             await loadBonusSettings();
             generateInviteLink();
             await loadUserStats();
             await loadReferredUsers();
         });
+
         // ==========================================
         // USER INITIALIZATION
         // ==========================================
         async function initializeUser() {
             try {
                 const user = tg.initDataUnsafe?.user;
-               
+              
                 if (!user) {
                     showMessage('Please open this app from Telegram', 'error');
                     return;
                 }
-               
+              
                 currentUser = user;
                 console.log('Current user initialized:', currentUser.id);
+               
                 // Check if user exists in database
                 const { data: existingUser, error } = await supabase
                     .from('users')
                     .select('*')
                     .eq('telegram_id', user.id)
                     .single();
+               
                 if (error && error.code !== 'PGRST116') {
                     console.error('Error fetching user:', error);
                     return;
                 }
+               
                 if (!existingUser) {
                     // Create new user and check for referrer
                     const newUser = await createUser(user);
@@ -1145,13 +1226,14 @@
                 showMessage('Failed to initialize user', 'error');
             }
         }
+
         // ==========================================
         // CREATE NEW USER
         // ==========================================
         async function createUser(user) {
             try {
                 console.log('Creating new user:', user.id);
-               
+              
                 const { data, error } = await supabase
                     .from('users')
                     .insert([{
@@ -1167,11 +1249,12 @@
                     }])
                     .select()
                     .single();
+               
                 if (error) {
                     console.error('Error creating user:', error);
                     throw error;
                 }
-               
+              
                 console.log('New user created successfully:', data);
                 return data;
             } catch (error) {
@@ -1179,6 +1262,7 @@
                 return null;
             }
         }
+
         // ==========================================
         // LOAD BONUS SETTINGS
         // ==========================================
@@ -1190,34 +1274,38 @@
                     .select('setting_value')
                     .eq('setting_key', 'referral_bonus')
                     .single();
+               
                 if (!referralError && referralData) {
                     referralBonusAmount = parseFloat(referralData.setting_value) || 1;
                 } else {
                     referralBonusAmount = 1;
                 }
-               
+              
                 console.log('Referral bonus loaded:', referralBonusAmount);
             } catch (error) {
                 console.error('Error loading bonus settings:', error);
                 referralBonusAmount = 1;
             }
         }
+
         // ==========================================
         // GENERATE INVITE LINK
         // ==========================================
         function generateInviteLink() {
             if (!currentUser) return;
-           
+          
             const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/Perks?startapp=${currentUser.id}`;
             document.getElementById('inviteLink').textContent = inviteLink;
             console.log('Invite link generated:', inviteLink);
         }
+
         // ==========================================
         // COPY INVITE LINK
         // ==========================================
         async function copyInviteLink() {
             const inviteLink = document.getElementById('inviteLink').textContent;
             if (inviteLink === 'Loading...') return;
+           
             try {
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     await navigator.clipboard.writeText(inviteLink);
@@ -1231,8 +1319,9 @@
                     document.execCommand('copy');
                     document.body.removeChild(textArea);
                 }
-                showMessage('Invite link copied to clipboard!', 'success');
                
+                showMessage('Invite link copied to clipboard!', 'success');
+              
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('success');
                 }
@@ -1241,22 +1330,27 @@
                 showMessage('Failed to copy link', 'error');
             }
         }
+
         // ==========================================
         // SHARE INVITE LINK
         // ==========================================
         function shareInviteLink() {
             const inviteLink = document.getElementById('inviteLink').textContent;
             if (inviteLink === 'Loading...') return;
+           
             const shareText = `Join me on StreamPerks and start earning rewards!\n\nGet bonus Perks when you sign up using my link!\n\n`;
+           
             if (tg.openTelegramLink) {
                 tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
             } else {
                 window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`, '_blank');
             }
+           
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('medium');
             }
         }
+
         // ==========================================
         // CHECK FOR REFERRER
         // ==========================================
@@ -1264,76 +1358,90 @@
             try {
                 const startParam = tg.initDataUnsafe?.start_param;
                 console.log('Start param detected:', startParam);
-               
+              
                 if (!startParam || !currentUser) {
                     console.log('No start param or current user');
                     return;
                 }
+               
                 const referrerId = parseInt(startParam);
                 console.log('Referrer ID:', referrerId, 'Current User ID:', currentUser.id);
-               
+              
                 // Don't allow self-referral
                 if (referrerId === currentUser.id) {
                     console.log('Self-referral detected, ignoring');
                     return;
                 }
+               
                 // Check if current user already has a referrer
                 const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('referrer_id, balance, total_earned')
                     .eq('telegram_id', currentUser.id)
                     .single();
+               
                 if (userError) {
                     console.error('Error fetching user data:', userError);
                     throw userError;
                 }
-               
+              
                 console.log('Current user data:', userData);
+               
                 // If user already has a referrer, don't process again
                 if (userData.referrer_id) {
                     console.log('User already has a referrer:', userData.referrer_id);
                     return;
                 }
+               
                 // Verify referrer exists
                 const { data: referrerData, error: referrerCheckError } = await supabase
                     .from('users')
                     .select('telegram_id')
                     .eq('telegram_id', referrerId)
                     .single();
+               
                 if (referrerCheckError || !referrerData) {
                     console.log('Referrer not found in database:', referrerId);
                     return;
                 }
+               
                 console.log('Setting referrer (pending qualification):', referrerId);
                 await setReferrer(referrerId);
             } catch (error) {
                 console.error('Error checking referrer:', error);
             }
         }
+
         // ==========================================
         // SET REFERRER (without immediate reward)
         // ==========================================
         async function setReferrer(referrerId) {
             try {
                 console.log('Setting referrer for user:', currentUser.id);
+               
                 // Update current user's referrer_id only
                 const { error: updateError } = await supabase
                     .from('users')
                     .update({ referrer_id: referrerId })
                     .eq('telegram_id', currentUser.id);
+               
                 if (updateError) {
                     console.error('Error updating referrer_id:', updateError);
                     throw updateError;
                 }
+               
                 // Increment referrer's referral_count
                 const { error: countError } = await supabase.rpc('increment_referral_count', {
                     user_telegram_id: referrerId
                 });
+               
                 if (countError) {
                     console.error('Error incrementing referral count:', countError);
                 }
+               
                 console.log('Referrer set successfully. Awaiting ad watch qualification.');
                 showMessage('Welcome! Watch your first ad to qualify your referrer for rewards!', 'success');
+               
                 // Reload stats
                 await loadUserStats();
             } catch (error) {
@@ -1341,90 +1449,104 @@
                 showMessage('Error processing referral', 'error');
             }
         }
+
         // ==========================================
-        // COUNT QUALIFIED REFERRALS
+        // COUNT QUALIFIED REFERRALS (OPTIMIZED WITH CACHING)
         // ==========================================
         async function countQualifiedReferrals(userId) {
             try {
-                // Get all users referred by this user
-                const { data: referrals, error: refError } = await supabase
-                    .from('users')
-                    .select('telegram_id')
-                    .eq('referrer_id', userId);
-                if (refError) throw refError;
-                if (!referrals || referrals.length === 0) {
+                // Use database function for better performance
+                const { data, error } = await supabase
+                    .rpc('get_qualified_referral_count', {
+                        user_telegram_id: userId
+                    });
+               
+                if (error) {
+                    console.error('Error counting qualified referrals:', error);
                     return 0;
                 }
-                // Check which referrals have watched at least 1 ad
-                let qualifiedCount = 0;
                
-                for (const referral of referrals) {
-                    const { data: adWatches, error: adError } = await supabase
-                        .from('user_ads')
-                        .select('id')
-                        .eq('user_id', referral.telegram_id)
-                        .limit(1);
-                    if (!adError && adWatches && adWatches.length > 0) {
-                        qualifiedCount++;
-                    }
-                }
-                return qualifiedCount;
+                return data || 0;
             } catch (error) {
-                console.error('Error counting qualified referrals:', error);
+                console.error('Error in countQualifiedReferrals:', error);
                 return 0;
             }
         }
+
         // ==========================================
-        // LOAD USER STATS
+        // LOAD USER STATS (OPTIMIZED WITH CACHING)
         // ==========================================
         async function loadUserStats() {
             try {
                 if (!currentUser) return;
+               
+                // Check cache
+                const now = Date.now();
+                if (cachedStats && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+                    updateStatsDisplay(cachedStats.userData, cachedStats.qualifiedCount);
+                    return;
+                }
+               
                 const { data, error } = await supabase
                     .from('users')
                     .select('referral_count, balance, total_earned')
                     .eq('telegram_id', currentUser.id)
                     .single();
+               
                 if (error) {
                     console.error('Error loading user stats:', error);
                     throw error;
                 }
-                // Count qualified referrals
+               
+                // Count qualified referrals using optimized function
                 const qualifiedCount = await countQualifiedReferrals(currentUser.id);
+               
+                // Update cache
+                cachedStats = { userData: data, qualifiedCount };
+                cacheTimestamp = now;
+               
                 console.log('User stats loaded:', data, 'Qualified:', qualifiedCount);
                 updateStatsDisplay(data, qualifiedCount);
             } catch (error) {
                 console.error('Error in loadUserStats:', error);
             }
         }
+
         // ==========================================
         // UPDATE STATS DISPLAY
         // ==========================================
         function updateStatsDisplay(userData, qualifiedCount) {
             const totalReferrals = userData.referral_count || 0;
-           
+          
             document.getElementById('referralCount').textContent = totalReferrals;
             document.getElementById('qualifiedCount').textContent = qualifiedCount;
             document.getElementById('qualifiedCountMilestone').textContent = qualifiedCount;
-           
+          
             console.log('Stats updated - Total:', totalReferrals, 'Qualified:', qualifiedCount);
         }
+
         // ==========================================
-        // LOAD REFERRED USERS
+        // LOAD REFERRED USERS (OPTIMIZED)
         // ==========================================
         async function loadReferredUsers() {
             try {
                 if (!currentUser) return;
+               
                 console.log('Loading referred users for:', currentUser.id);
+               
+                // Optimized query - limit to recent 50 referrals
                 const { data, error } = await supabase
                     .from('users')
                     .select('telegram_id, username, first_name, last_name, photo_url, created_at')
                     .eq('referrer_id', currentUser.id)
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+               
                 if (error) {
                     console.error('Error loading referred users:', error);
                     throw error;
                 }
+               
                 console.log('Referred users count:', data?.length || 0);
                 await displayReferredUsers(data);
             } catch (error) {
@@ -1438,11 +1560,13 @@
                 `;
             }
         }
+
         // ==========================================
-        // DISPLAY REFERRED USERS
+        // DISPLAY REFERRED USERS (OPTIMIZED - BATCH CHECK)
         // ==========================================
         async function displayReferredUsers(users) {
             const container = document.getElementById('referredUsersContainer');
+           
             if (!users || users.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1453,27 +1577,34 @@
                 `;
                 return;
             }
+           
+            // Batch check for ad watches (much faster than individual queries)
+            const userIds = users.map(u => u.telegram_id);
+            const { data: adWatches, error: adError } = await supabase
+                .from('user_ads')
+                .select('user_id')
+                .in('user_id', userIds);
+           
+            const qualifiedUserIds = new Set(adWatches ? adWatches.map(a => a.user_id) : []);
+           
             let html = '<div class="user-list">';
+           
             for (const user of users) {
                 const displayName = user.first_name || user.username || 'User';
                 const initial = displayName.charAt(0).toUpperCase();
                 const joinDate = formatDate(user.created_at);
-                // Check if user has watched at least 1 ad
-                const { data: adWatches, error: adError } = await supabase
-                    .from('user_ads')
-                    .select('id')
-                    .eq('user_id', user.telegram_id)
-                    .limit(1);
-                const isQualified = !adError && adWatches && adWatches.length > 0;
+               
+                const isQualified = qualifiedUserIds.has(user.telegram_id);
                 const statusClass = isQualified ? 'qualified' : 'pending';
                 const statusIndicator = isQualified ? 'qualified' : 'pending';
                 const bonusStatus = isQualified ? 'earned' : 'pending';
                 const bonusText = isQualified ? `+${referralBonusAmount}` : 'Pending';
+               
                 html += `
                     <div class="user-item ${statusClass}">
                         <div class="user-avatar">
                             ${user.photo_url ?
-                                `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}">` :
+                                `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}" onerror="this.parentElement.innerHTML='<span>${escapeHtml(initial)}</span>'">` :
                                 `<span>${escapeHtml(initial)}</span>`
                             }
                             <div class="status-indicator ${statusIndicator}"></div>
@@ -1484,18 +1615,18 @@
                         </div>
                         <div class="user-bonus">
                             <span><i class="fas fa-coins"></i> ${bonusText}</span>
-                            <span class="bonus-status ${bonusStatus}">
-                                ${isQualified ? 'Qualified' : 'Needs 1 ad'}
-                            </span>
+                            <span class="bonus-status ${bonusStatus}">${isQualified ? 'Qualified' : 'Pending'}</span>
                         </div>
                     </div>
                 `;
             }
+           
             html += '</div>';
             container.innerHTML = html;
         }
+
         // ==========================================
-        // LOAD LEADERBOARD
+        // LOAD LEADERBOARD (OPTIMIZED WITH CACHING)
         // ==========================================
         async function loadLeaderboard() {
             try {
@@ -1506,172 +1637,184 @@
                         <p>Loading leaderboard...</p>
                     </div>
                 `;
-                // Get all users with their referral counts
-                const { data: users, error } = await supabase
-                    .from('users')
-                    .select('telegram_id, username, first_name, photo_url, referral_count')
-                    .order('referral_count', { ascending: false })
-                    .limit(100);
+               
+                // Check cache
+                const now = Date.now();
+                if (cachedLeaderboard && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+                    displayLeaderboard(cachedLeaderboard);
+                    return;
+                }
+               
+                // Use database function for better performance
+                const { data, error } = await supabase
+                    .rpc('get_leaderboard', { limit_count: 100 });
+               
                 if (error) {
-                    console.error('Leaderboard error:', error);
+                    console.error('Error loading leaderboard:', error);
                     throw error;
                 }
-                console.log('Users fetched:', users?.length);
-                // Calculate qualified referrals for each user
-                const leaderboardData = [];
                
-                for (const user of users) {
-                    const qualifiedCount = await countQualifiedReferrals(user.telegram_id);
-                    if (qualifiedCount > 0) {
-                        leaderboardData.push({
-                            ...user,
-                            qualifiedCount
-                        });
-                    }
-                }
-                // Sort by qualified count
-                leaderboardData.sort((a, b) => b.qualifiedCount - a.qualifiedCount);
-                console.log('Leaderboard data prepared:', leaderboardData.length);
-                // Display current user's milestone if they're logged in
-                if (currentUser) {
-                    await displayCurrentUserMilestone();
-                }
-                displayLeaderboard(leaderboardData.slice(0, 50));
+                // Cache results
+                cachedLeaderboard = data;
+                cacheTimestamp = now;
+               
+                displayLeaderboard(data);
             } catch (error) {
                 console.error('Error loading leaderboard:', error);
                 document.getElementById('leaderboardContainer').innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-exclamation-circle"></i>
                         <h3>Error Loading Leaderboard</h3>
-                        <p>${error.message || 'Please try again later'}</p>
+                        <p>Please try again later</p>
                     </div>
                 `;
             }
         }
-        // ==========================================
-        // DISPLAY CURRENT USER MILESTONE IN LEADERBOARD
-        // ==========================================
-        async function displayCurrentUserMilestone() {
-            try {
-                if (!currentUser) return;
-                const qualifiedCount = await countQualifiedReferrals(currentUser.id);
-               
-                // Get claimed milestones
-                const { data: claimedData } = await supabase
-                    .from('milestone_claims')
-                    .select('milestone_target')
-                    .eq('user_id', currentUser.id);
-                const claimedTargets = claimedData ? claimedData.map(c => c.milestone_target) : [];
-                // Find next unclaimed milestone
-                let nextMilestone = null;
-                for (const milestone of MILESTONES) {
-                    if (!claimedTargets.includes(milestone.target)) {
-                        nextMilestone = milestone;
-                        break;
-                    }
-                }
-                const milestoneDisplay = document.getElementById('currentMilestoneDisplay');
-                if (!nextMilestone) {
-                    milestoneDisplay.innerHTML = `
-                        <div class="current-milestone-card">
-                            <h3><i class="fas fa-trophy"></i> All Milestones Completed!</h3>
-                            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 8px;">
-                                Congratulations! You've claimed all available milestones.
-                            </p>
-                        </div>
-                    `;
-                    return;
-                }
-                const progress = Math.min((qualifiedCount / nextMilestone.target) * 100, 100);
-                const canClaim = qualifiedCount >= nextMilestone.target;
-                milestoneDisplay.innerHTML = `
-                    <div class="current-milestone-card">
-                        <h3><i class="fas fa-flag-checkered"></i> Your Current Milestone</h3>
-                        <div class="milestone-compact">
-                            <div class="milestone-header">
-                                <span class="milestone-title">${nextMilestone.target} Qualified Referrals</span>
-                                <span class="milestone-reward">
-                                    <i class="fas fa-coins"></i> ${nextMilestone.pex} PEX + $${nextMilestone.usdt}
-                                </span>
-                            </div>
-                            <div class="milestone-progress-bar">
-                                <div class="milestone-progress-fill" style="width: ${progress}%"></div>
-                            </div>
-                            <div class="milestone-progress-text">
-                                ${qualifiedCount} / ${nextMilestone.target} qualified referrals
-                            </div>
-                            ${canClaim ? `
-                                <button class="btn btn-primary" onclick="claimMilestone(${nextMilestone.target})" style="margin-top: 10px; width: 100%;">
-                                    <i class="fas fa-gift"></i> Claim Reward
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-            } catch (error) {
-                console.error('Error displaying current user milestone:', error);
-            }
-        }
+
         // ==========================================
         // DISPLAY LEADERBOARD
         // ==========================================
-        function displayLeaderboard(users) {
+        function displayLeaderboard(leaders) {
             const container = document.getElementById('leaderboardContainer');
-            if (!users || users.length === 0) {
+           
+            if (!leaders || leaders.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-trophy"></i>
-                        <h3>No Data Yet</h3>
-                        <p>Be the first to earn qualified referrals!</p>
+                        <h3>No Leaders Yet</h3>
+                        <p>Be the first to start referring!</p>
                     </div>
                 `;
                 return;
             }
+           
             let html = '<div class="leaderboard-list">';
-            users.forEach((user, index) => {
-                const displayName = user.first_name || user.username || 'User';
+           
+            leaders.forEach((leader, index) => {
+                const rank = index + 1;
+                const displayName = leader.first_name || leader.username || 'User';
                 const initial = displayName.charAt(0).toUpperCase();
-                const isCurrentUser = currentUser && user.telegram_id === currentUser.id;
+                const qualifiedCount = leader.qualified_referrals || 0;
                
                 let rankClass = '';
                 let rankIcon = '';
                
-                if (index === 0) {
+                if (rank === 1) {
                     rankClass = 'gold';
                     rankIcon = '<i class="fas fa-crown"></i>';
-                } else if (index === 1) {
+                } else if (rank === 2) {
                     rankClass = 'silver';
                     rankIcon = '<i class="fas fa-medal"></i>';
-                } else if (index === 2) {
+                } else if (rank === 3) {
                     rankClass = 'bronze';
                     rankIcon = '<i class="fas fa-award"></i>';
                 }
+               
+                const isCurrentUser = currentUser && leader.telegram_id === currentUser.id;
+               
                 html += `
                     <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
-                        <div class="rank ${rankClass}">
-                            ${rankIcon || `#${index + 1}`}
+                        <div class="leader-rank ${rankClass}">
+                            ${rankIcon || `<span>${rank}</span>`}
                         </div>
-                        <div class="user-avatar-small">
-                            ${user.photo_url ?
-                                `<img src="${user.photo_url}" alt="${escapeHtml(displayName)}">` :
+                        <div class="leader-avatar">
+                            ${leader.photo_url ?
+                                `<img src="${leader.photo_url}" alt="${escapeHtml(displayName)}" onerror="this.parentElement.innerHTML='<span>${escapeHtml(initial)}</span>'">` :
                                 `<span>${escapeHtml(initial)}</span>`
                             }
                         </div>
-                        <div class="leaderboard-info">
-                            <div class="leaderboard-name">${escapeHtml(displayName)} ${isCurrentUser ? '(You)' : ''}</div>
-                            <div class="leaderboard-score">${user.qualifiedCount} qualified referrals</div>
+                        <div class="leader-info">
+                            <div class="leader-name">
+                                ${escapeHtml(displayName)}
+                                ${isCurrentUser ? '<span style="color: var(--neon-cyan); margin-left: 8px;">(You)</span>' : ''}
+                            </div>
+                            <div class="leader-stats">
+                                <i class="fas fa-user-check"></i> ${qualifiedCount} Qualified Referral${qualifiedCount !== 1 ? 's' : ''}
+                            </div>
                         </div>
                     </div>
                 `;
             });
+           
             html += '</div>';
             container.innerHTML = html;
+           
+            // Display current user's milestone status at the top
+            displayCurrentMilestone(leaders);
         }
+
+        // ==========================================
+        // DISPLAY CURRENT MILESTONE
+        // ==========================================
+        function displayCurrentMilestone(leaders) {
+            if (!currentUser) return;
+           
+            const currentUserData = leaders.find(l => l.telegram_id === currentUser.id);
+            const qualifiedCount = currentUserData ? (currentUserData.qualified_referrals || 0) : 0;
+           
+            const nextMilestone = MILESTONES.find(m => m.target > qualifiedCount);
+            const lastAchieved = MILESTONES.filter(m => m.target <= qualifiedCount).pop();
+           
+            const container = document.getElementById('currentMilestoneDisplay');
+           
+            if (!nextMilestone && lastAchieved) {
+                // User has completed all milestones
+                container.innerHTML = `
+                    <div class="invite-card" style="background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.15)); border: 2px solid #ffd700; margin-bottom: 20px;">
+                        <div style="text-align: center;">
+                            <i class="fas fa-trophy" style="font-size: 48px; color: #ffd700; margin-bottom: 15px;"></i>
+                            <h2 style="color: #ffd700; margin-bottom: 10px;">
+                                All Milestones Complete!
+                            </h2>
+                            <p style="font-size: 16px; color: var(--text-primary);">
+                                You've achieved <strong>${qualifiedCount}</strong> qualified referrals!
+                            </p>
+                            <p style="margin-top: 10px; color: var(--text-secondary);">
+                                Keep inviting to maintain your top position!
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } else if (nextMilestone) {
+                // User has a next milestone to reach
+                const remaining = nextMilestone.target - qualifiedCount;
+                const progress = (qualifiedCount / nextMilestone.target) * 100;
+               
+                container.innerHTML = `
+                    <div class="invite-card" style="margin-bottom: 20px;">
+                        <h2><i class="fas fa-bullseye"></i> Your Progress</h2>
+                        <div style="margin: 20px 0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-weight: 600;">${qualifiedCount} / ${nextMilestone.target} Qualified</span>
+                                <span style="color: var(--neon-cyan); font-weight: 600;">${progress.toFixed(1)}%</span>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.1); border-radius: 10px; height: 20px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple)); height: 100%; width: ${progress}%; transition: width 0.5s ease; box-shadow: 0 0 15px var(--neon-cyan-glow);"></div>
+                            </div>
+                        </div>
+                        <div style="background: rgba(0, 242, 255, 0.1); padding: 15px; border-radius: 12px; border: 1px solid var(--neon-cyan);">
+                            <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+                                <i class="fas fa-gift"></i> Next Milestone Reward:
+                            </p>
+                            <p style="margin: 8px 0 0 0; font-size: 18px; font-weight: 700; color: var(--neon-cyan);">
+                                ${nextMilestone.pex.toLocaleString()} PEX + $${nextMilestone.usdt} USDT
+                            </p>
+                            <p style="margin: 8px 0 0 0; font-size: 13px; color: var(--text-secondary);">
+                                Only <strong style="color: var(--neon-cyan);">${remaining}</strong> more qualified referral${remaining !== 1 ? 's' : ''} needed!
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
         // ==========================================
         // LOAD MILESTONES
         // ==========================================
         async function loadMilestones() {
             try {
+                if (!currentUser) return;
+               
                 const container = document.getElementById('milestonesContainer');
                 container.innerHTML = `
                     <div class="loading">
@@ -1679,42 +1822,20 @@
                         <p>Loading milestones...</p>
                     </div>
                 `;
-                if (!currentUser) {
-                    container.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <h3>User Not Found</h3>
-                            <p>Please refresh the app</p>
-                        </div>
-                    `;
-                    return;
-                }
-                // Get user's qualified referral count
+               
+                // Get current user's qualified referral count
                 const qualifiedCount = await countQualifiedReferrals(currentUser.id);
-                // Get claimed milestones
-                const { data: claimedData, error: claimedError } = await supabase
-                    .from('milestone_claims')
-                    .select('milestone_target, claimed_at, pex_amount, usdt_amount')
-                    .eq('user_id', currentUser.id);
-                if (claimedError) {
-                    console.error('Error loading claimed milestones:', claimedError);
-                }
-                const claimedTargets = claimedData ? claimedData.map(c => c.milestone_target) : [];
                
                 // Calculate total milestone earnings
-                let totalPexEarned = 0;
-                let totalUsdtEarned = 0;
+                const achievedMilestones = MILESTONES.filter(m => m.target <= qualifiedCount);
+                const totalMilestonePex = achievedMilestones.reduce((sum, m) => sum + m.pex, 0);
+                const totalMilestoneUsdt = achievedMilestones.reduce((sum, m) => sum + m.usdt, 0);
                
-                if (claimedData) {
-                    claimedData.forEach(claim => {
-                        totalPexEarned += claim.pex_amount || 0;
-                        totalUsdtEarned += claim.usdt_amount || 0;
-                    });
-                }
-                // Update milestone earnings display
-                document.getElementById('milestoneEarnings').textContent = `${totalPexEarned} PEX + $${totalUsdtEarned.toFixed(2)}`;
-                console.log('Milestones loaded - Qualified:', qualifiedCount, 'Claimed:', claimedTargets);
-                displayMilestones(qualifiedCount, claimedTargets);
+                // Update milestone stats
+                document.getElementById('qualifiedCountMilestone').textContent = qualifiedCount;
+                document.getElementById('milestoneEarnings').textContent = `${totalMilestonePex.toLocaleString()} PEX`;
+               
+                displayMilestones(qualifiedCount);
             } catch (error) {
                 console.error('Error loading milestones:', error);
                 document.getElementById('milestonesContainer').innerHTML = `
@@ -1726,211 +1847,129 @@
                 `;
             }
         }
+
         // ==========================================
         // DISPLAY MILESTONES
         // ==========================================
-        function displayMilestones(qualifiedCount, claimedTargets) {
+        function displayMilestones(qualifiedCount) {
             const container = document.getElementById('milestonesContainer');
+           
             let html = '<div class="milestones-list">';
+           
             MILESTONES.forEach((milestone, index) => {
+                const isAchieved = qualifiedCount >= milestone.target;
+                const isCurrent = !isAchieved && (index === 0 || qualifiedCount >= MILESTONES[index - 1].target);
                 const progress = Math.min((qualifiedCount / milestone.target) * 100, 100);
-                const isCompleted = qualifiedCount >= milestone.target;
-                const isClaimed = claimedTargets.includes(milestone.target);
-                let statusClass = '';
-                let statusText = '';
-                let buttonHtml = '';
-                if (isClaimed) {
-                    statusClass = 'claimed';
-                    statusText = '<span class="milestone-status claimed"><i class="fas fa-check-circle"></i> Claimed</span>';
-                } else if (isCompleted) {
-                    statusClass = 'completed';
-                    statusText = '<span class="milestone-status completed"><i class="fas fa-gift"></i> Ready to Claim</span>';
-                    buttonHtml = `
-                        <button class="btn btn-primary milestone-claim-btn" onclick="claimMilestone(${milestone.target})">
-                            <i class="fas fa-gift"></i> Claim Reward
-                        </button>
-                    `;
-                } else {
-                    statusClass = 'locked';
-                    statusText = '<span class="milestone-status locked"><i class="fas fa-lock"></i> Locked</span>';
+               
+                let statusClass = 'locked';
+                let statusIcon = 'fa-lock';
+                let statusText = 'Locked';
+               
+                if (isAchieved) {
+                    statusClass = 'achieved';
+                    statusIcon = 'fa-check-circle';
+                    statusText = 'Achieved!';
+                } else if (isCurrent) {
+                    statusClass = 'current';
+                    statusIcon = 'fa-target';
+                    statusText = 'In Progress';
                 }
+               
                 html += `
                     <div class="milestone-item ${statusClass}">
-                        <div class="milestone-icon">
-                            <i class="fas ${isClaimed ? 'fa-check-circle' : isCompleted ? 'fa-gift' : 'fa-lock'}"></i>
-                        </div>
-                        <div class="milestone-content">
-                            <div class="milestone-header">
-                                <h3>${milestone.target} Qualified Referrals</h3>
+                        <div class="milestone-header">
+                            <div class="milestone-target">
+                                <i class="fas fa-flag-checkered"></i>
+                                <span>${milestone.target} Qualified Referrals</span>
+                            </div>
+                            <div class="milestone-status ${statusClass}">
+                                <i class="fas ${statusIcon}"></i>
                                 ${statusText}
                             </div>
-                            <div class="milestone-reward-display">
-                                <span><i class="fas fa-coins"></i> ${milestone.pex} PEX</span>
-                                <span><i class="fas fa-dollar-sign"></i> ${milestone.usdt} USDT</span>
-                            </div>
-                            <div class="milestone-progress-bar">
-                                <div class="milestone-progress-fill" style="width: ${progress}%"></div>
-                            </div>
-                            <div class="milestone-progress-text">
-                                ${qualifiedCount} / ${milestone.target} qualified referrals
-                            </div>
-                            ${buttonHtml}
                         </div>
+                        <div class="milestone-rewards">
+                            <div class="reward-item">
+                                <i class="fas fa-coins"></i>
+                                <span>${milestone.pex.toLocaleString()} PEX</span>
+                            </div>
+                            <div class="reward-item">
+                                <i class="fas fa-dollar-sign"></i>
+                                <span>$${milestone.usdt} USDT</span>
+                            </div>
+                        </div>
+                        ${!isAchieved ? `
+                            <div class="milestone-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                                <span class="progress-text">${qualifiedCount} / ${milestone.target}</span>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
             });
+           
             html += '</div>';
             container.innerHTML = html;
         }
+
         // ==========================================
-        // CLAIM MILESTONE
-        // ==========================================
-        async function claimMilestone(target) {
-            try {
-                if (!currentUser) {
-                    showMessage('User not found', 'error');
-                    return;
-                }
-                // Find the milestone
-                const milestone = MILESTONES.find(m => m.target === target);
-                if (!milestone) {
-                    showMessage('Invalid milestone', 'error');
-                    return;
-                }
-                // Verify user has enough qualified referrals
-                const qualifiedCount = await countQualifiedReferrals(currentUser.id);
-               
-                if (qualifiedCount < milestone.target) {
-                    showMessage(`You need ${milestone.target} qualified referrals to claim this milestone`, 'error');
-                    return;
-                }
-                // Check if already claimed
-                const { data: existing, error: checkError } = await supabase
-                    .from('milestone_claims')
-                    .select('id')
-                    .eq('user_id', currentUser.id)
-                    .eq('milestone_target', milestone.target)
-                    .single();
-                if (existing) {
-                    showMessage('Milestone already claimed', 'error');
-                    return;
-                }
-                // Record the claim
-                const { error: claimError } = await supabase
-                    .from('milestone_claims')
-                    .insert([{
-                        user_id: currentUser.id,
-                        milestone_target: milestone.target,
-                        pex_amount: milestone.pex,
-                        usdt_amount: milestone.usdt
-                    }]);
-                if (claimError) {
-                    console.error('Error recording claim:', claimError);
-                    throw claimError;
-                }
-                // Update user's balance
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('balance, total_earned')
-                    .eq('telegram_id', currentUser.id)
-                    .single();
-                if (userError) {
-                    console.error('Error fetching user:', userError);
-                    throw userError;
-                }
-                const newBalance = (userData.balance || 0) + milestone.pex + milestone.usdt;
-                const newTotalEarned = (userData.total_earned || 0) + milestone.pex + milestone.usdt;
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({
-                        balance: newBalance,
-                        total_earned: newTotalEarned
-                    })
-                    .eq('telegram_id', currentUser.id);
-                if (updateError) {
-                    console.error('Error updating user balance:', updateError);
-                    throw updateError;
-                }
-                showMessage(`Milestone claimed! You received ${milestone.pex} PEX + $${milestone.usdt} USDT`, 'success');
-                if (tg.HapticFeedback) {
-                    tg.HapticFeedback.notificationOccurred('success');
-                }
-                // Reload milestones
-                await loadMilestones();
-                await loadUserStats();
-                // Reload leaderboard milestone display if on that tab
-                if (currentTab === 'leaderboard') {
-                    await displayCurrentUserMilestone();
-                }
-            } catch (error) {
-                console.error('Error claiming milestone:', error);
-                showMessage('Failed to claim milestone. Please try again.', 'error');
-            }
-        }
-        // ==========================================
-        // FORMAT DATE
+        // UTILITY FUNCTIONS
         // ==========================================
         function formatDate(dateString) {
             const date = new Date(dateString);
             const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
-            if (diffMins < 60) {
-                return `${diffMins} min${diffMins !== 1 ? 's' : ''} ago`;
-            } else if (diffHours < 24) {
-                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-            } else if (diffDays < 30) {
-                return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-            } else {
-                return date.toLocaleDateString();
-            }
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+           
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays} days ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+            if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+            return date.toLocaleDateString();
         }
-        // ==========================================
-        // ESCAPE HTML
-        // ==========================================
+
         function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
-        // ==========================================
-        // SHOW MESSAGE
-        // ==========================================
-        function showMessage(text, type = 'info') {
+
+        function showMessage(message, type) {
             const container = document.getElementById('messageContainer');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;
-           
-            const icon = type === 'success' ? 'check-circle' :
-                        type === 'error' ? 'exclamation-circle' :
-                        'info-circle';
-           
             messageDiv.innerHTML = `
-                <i class="fas fa-${icon}"></i>
-                <span>${text}</span>
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                <span>${escapeHtml(message)}</span>
             `;
            
             container.appendChild(messageDiv);
            
             setTimeout(() => {
-                messageDiv.classList.add('show');
-            }, 10);
-           
-            setTimeout(() => {
-                messageDiv.classList.remove('show');
-                setTimeout(() => {
-                    messageDiv.remove();
-                }, 300);
-            }, 4000);
+                messageDiv.style.opacity = '0';
+                messageDiv.style.transform = 'translateY(-20px)';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 5000);
         }
-    </script>
+
+        // ==========================================
+        // PERIODIC REFRESH
+        // ==========================================
+        setInterval(async () => {
+            if (currentTab === 'invite') {
+                await loadUserStats();
+            } else if (currentTab === 'leaderboard') {
+                // Clear cache to force refresh
+                cachedLeaderboard = null;
+                cacheTimestamp = null;
+                await loadLeaderboard();
+            } else if (currentTab === 'milestones') {
+                await loadMilestones();
+            }
+        }, 60000); // Refresh every 60 seconds
+</script>
 </body>
 </html>
 
