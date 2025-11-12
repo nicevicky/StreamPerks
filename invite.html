@@ -1794,166 +1794,206 @@
                 console.error('Error loading user stats:', error);
             }
         }
-        // // ==========================================
-// LOAD REFERRED USERS
-// ==========================================
-async function loadReferredUsers() {
-    try {
-        if (!currentUser) return;
-        const container = document.getElementById('referredUsersContainer');
-        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading referrals...</p></div>';
-        // Get all referrals (ADD photo_url HERE)
-        const { data: referrals, error } = await supabase
-            .from('users')
-            .select('telegram_id, first_name, last_name, username, created_at, photo_url')  // <-- Added photo_url
-            .eq('referrer_id', currentUser.id)
-            .order('created_at', { ascending: false });
-        if (error) throw error;
-        if (!referrals || referrals.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-friends"></i>
-                    <h3>No Referrals Yet</h3>
-                    <p>Share your invite link to start earning!</p>
-                </div>
-            `;
-            return;
-        }
-        // Get qualified status for each referral
-        const referralIds = referrals.map(r => r.telegram_id);
-        const { data: adsData, error: adsError } = await supabase
-            .from('user_ads')
-            .select('user_id')
-            .in('user_id', referralIds);
-        if (adsError) throw adsError;
-        const qualifiedUserIds = new Set(adsData?.map(ad => ad.user_id) || []);
-        // Build referrals HTML
-        let html = '';
-        referrals.forEach(referral => {
-            const isQualified = qualifiedUserIds.has(referral.telegram_id);
-            const displayName = referral.first_name + (referral.last_name ? ' ' + referral.last_name : '');
-            const joinDate = new Date(referral.created_at).toLocaleDateString();
-            const statusClass = isQualified ? 'qualified' : 'pending';
-            const statusIcon = isQualified ? 'fa-check-circle' : 'fa-clock';
-            const statusText = isQualified ? 'Qualified' : 'Pending';
-            const statusColor = isQualified ? '#00ff96' : '#ffc107';
-            // Conditionally set avatar content (USE photo_url IF AVAILABLE)
-            const avatarContent = referral.photo_url 
-                ? `<img src="${referral.photo_url}" alt="${displayName}">` 
-                : displayName.charAt(0).toUpperCase();
-            html += `
-                <div class="user-item ${statusClass}">
-                    <div class="user-avatar">
-                        ${avatarContent}  // <-- Updated to use avatarContent
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">${displayName}</div>
-                        <div class="user-details">
-                            ${referral.username ? `@${referral.username}` : 'No username'} • Joined ${joinDate}
-                        </div>
-                    </div>
-                    <div class="user-status" style="color: ${statusColor}">
-                        <i class="fas ${statusIcon}"></i> ${statusText}
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Error loading referred users:', error);
-        document.getElementById('referredUsersContainer').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Error Loading Referrals</h3>
-                <p>Please try again later</p>
-            </div>
-        `;
-    }
-}
-        // // ==========================================
-// LOAD LEADERBOARD
-// ==========================================
-async function loadLeaderboard() {
-    try {
-        const container = document.getElementById('leaderboardContainer');
-        container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading leaderboard...</p></div>';
-        // Get all users with their qualified referral counts (ADD photo_url HERE)
-        const { data: users, error } = await supabase
-            .from('users')
-            .select('telegram_id, first_name, last_name, username, referral_count, photo_url')  // <-- Added photo_url
-            .order('referral_count', { ascending: false })
-            .limit(100);
-        if (error) throw error;
-        if (!users || users.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-trophy"></i>
-                    <h3>No Data Yet</h3>
-                    <p>Be the first to invite friends!</p>
-                </div>
-            `;
-            return;
-        }
-        // Calculate qualified referrals for top users
-        const usersWithQualified = await Promise.all(
-            users.map(async (user) => {
-                const qualifiedCount = await countQualifiedReferrals(user.telegram_id);
-                return { ...user, qualified_count: qualifiedCount };
-            })
-        );
-        // Sort by qualified referrals
-        usersWithQualified.sort((a, b) => b.qualified_count - a.qualified_count);
-        // Display current user milestone if in invite tab
-        if (currentUser) {
-            const currentUserData = usersWithQualified.find(u => u.telegram_id === currentUser.id);
-            if (currentUserData && currentUserData.qualified_count > 0) {
-                displayCurrentMilestone(currentUserData.qualified_count);
+        // //     // ==========================================
+    // LOAD REFERRED USERS (OPTIMIZED + PHOTO)
+    // ==========================================
+    async function loadReferredUsers() {
+        try {
+            if (!currentUser) return;
+            const container = document.getElementById('referredUsersContainer');
+            container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading referrals...</p></div>';
+
+            // 1. Get ALL referrals in ONE query
+            const { data: referrals, error } = await supabase
+                .from('users')
+                .select('telegram_id, first_name, last_name, username, photo_url, created_at')
+                .eq('referrer_id', currentUser.id)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            if (!referrals || referrals.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-user-friends"></i>
+                        <h3>No Referrals Yet</h3>
+                        <p>Share your invite link to start earning!</p>
+                    </div>`;
+                return;
             }
-        }
-        // Build leaderboard HTML
-        let html = '';
-        usersWithQualified.forEach((user, index) => {
-            const rank = index + 1;
-            const displayName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
-            const isCurrentUser = currentUser && user.telegram_id === currentUser.id;
-            const rankClass = rank <= 3 ? `rank-${rank}` : '';
-            const currentUserClass = isCurrentUser ? 'current-user' : '';
-            let rankDisplay = rank;
-            if (rank === 1) rankDisplay = '🥇';
-            else if (rank === 2) rankDisplay = '🥈';
-            else if (rank === 3) rankDisplay = '🥉';
-            // Conditionally set avatar content (USE photo_url IF AVAILABLE)
-            const avatarContent = user.photo_url 
-                ? `<img src="${user.photo_url}" alt="${displayName}">` 
-                : displayName.charAt(0).toUpperCase();
-            html += `
-                <div class="leaderboard-item ${rankClass} ${currentUserClass}">
-                    <div class="leaderboard-rank">${rankDisplay}</div>
-                    <div class="user-avatar small">
-                        ${avatarContent}  // <-- Updated to use avatarContent
-                    </div>
-                    <div class="leaderboard-info">
-                        <div class="user-name">${displayName}</div>
-                        <div class="user-stats">
-                            <span><i class="fas fa-users"></i> ${user.referral_count} total</span>
-                            <span><i class="fas fa-user-check"></i> ${user.qualified_count} qualified</span>
+
+            // 2. Bulk-fetch ad watches for ALL referral telegram_ids
+            const refIds = referrals.map(r => r.telegram_id);
+            const { data: adWatches, error: adError } = await supabase
+                .from('user_ads')
+                .select('user_id')
+                .in('user_id', refIds);
+
+            if (adError) throw adError;
+
+            const qualifiedSet = new Set(adWatches?.map(a => a.user_id) ?? []);
+
+            // 3. Build HTML (photo + status)
+            let html = '<div class="user-list">';
+            for (const u of referrals) {
+                const displayName = u.first_name || u.username || 'User';
+                const initial = displayName.charAt(0).toUpperCase();
+                const isQualified = qualifiedSet.has(u.telegram_id);
+                const statusClass = isQualified ? 'qualified' : 'pending';
+                const bonusText = isQualified ? `+${referralBonusAmount}` : 'Pending';
+
+                html += `
+                    <div class="user-item ${statusClass}">
+                        <div class="user-avatar">
+                            ${u.photo_url
+                                ? `<img src="${escapeHtml(u.photo_url)}" alt="${escapeHtml(displayName)}">`
+                                : `<span>${escapeHtml(initial)}</span>`
+                            }
+                            <div class="status-indicator ${statusClass}"></div>
                         </div>
-                    </div>
+                        <div class="user-info">
+                            <div class="user-name">${escapeHtml(displayName)}</div>
+                            <div class="user-date">Joined ${formatDate(u.created_at)}</div>
+                        </div>
+                        <div class="user-bonus">
+                            <span><i class="fas fa-coins"></i> ${bonusText}</span>
+                            <span class="bonus-status ${isQualified?'earned':'pending'}">
+                                ${isQualified ? 'Qualified' : 'Needs 1 ad'}
+                            </span>
+                        </div>
+                    </div>`;
+            }
+            html += '</div>';
+            container.innerHTML = html;
+
+        } catch (err) {
+            console.error('loadReferredUsers error:', err);
+            document.getElementById('referredUsersContainer').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error Loading Referrals</h3>
+                    <p>Please try again later</p>
+                </div>`;
+        }
+    }
+        // //     // ==========================================
+    // LOAD LEADERBOARD (OPTIMIZED + PHOTO)
+    // ==========================================
+    async function loadLeaderboard() {
+        try {
+            const container = document.getElementById('leaderboardContainer');
+            container.innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading leaderboard...</p>
                 </div>
             `;
-        });
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Error loading leaderboard:', error);
-        document.getElementById('leaderboardContainer').innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Error Loading Leaderboard</h3>
-                <p>Please try again later</p>
-            </div>
-        `;
+
+            // clear cache
+            qualifiedReferralsCache = {};
+
+            const { data: users, error } = await supabase
+                .from('users')
+                .select('telegram_id, username, first_name, photo_url, referral_count')
+                .gt('referral_count', 0)
+                .order('referral_count', { ascending: false })
+                .limit(100);
+
+            if (error) throw error;
+            if (!users || users.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <h3>No Data Yet</h3>
+                        <p>Be the first to invite friends!</p>
+                    </div>`;
+                return;
+            }
+
+            // Bulk ad watches for all leaderboard users
+            const userIds = users.map(u => u.telegram_id);
+            const { data: allAds, error: adsError } = await supabase
+                .from('user_ads')
+                .select('user_id')
+                .in('user_id', userIds);
+
+            if (adsError) throw adsError;
+
+            const adMap = {};
+            allAds?.forEach(a => adMap[a.user_id] = (adMap[a.user_id] || 0) + 1);
+
+            // Calculate qualified referrals per user
+            const leaderboardPromises = users.map(async (user) => {
+                const { data: refs } = await supabase
+                    .from('users')
+                    .select('telegram_id')
+                    .eq('referrer_id', user.telegram_id);
+
+                const qualifiedCount = refs?.filter(r => adMap[r.telegram_id] > 0).length ?? 0;
+                return { ...user, qualifiedReferrals: qualifiedCount };
+            });
+
+            const leaderboardData = await Promise.all(leaderboardPromises);
+            leaderboardData.sort((a, b) => b.qualifiedReferrals - a.qualifiedReferrals);
+
+            // Current-user milestone card
+            if (currentUser) {
+                const cur = leaderboardData.find(u => u.telegram_id === currentUser.id);
+                displayCurrentMilestone(cur?.qualifiedReferrals ?? 0);
+            }
+
+            displayLeaderboard(leaderboardData);
+
+        } catch (err) {
+            console.error('loadLeaderboard error:', err);
+            document.getElementById('leaderboardContainer').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Error Loading Leaderboard</h3>
+                    <p>Please try again later</p>
+                </div>`;
+        }
     }
-}
+
+    // ----- DISPLAY LEADERBOARD (photo support) -----
+    function displayLeaderboard(data) {
+        const container = document.getElementById('leaderboardContainer');
+        let html = '<div class="leaderboard-list">';
+
+        data.forEach((u, idx) => {
+            const rank = idx + 1;
+            const name = u.first_name || u.username || 'User';
+            const initial = name.charAt(0).toUpperCase();
+            const isMe = currentUser && u.telegram_id === currentUser.id;
+            const rankEmoji = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : rank;
+
+            html += `
+                <div class="leaderboard-item ${isMe ? 'current-user' : ''} ${rank <= 3 ? `rank-${rank}` : ''}">
+                    <div class="rank-badge ${rank <= 3 ? (rank===1?'gold':rank===2?'silver':'bronze') : 'regular'}">
+                        <div class="crown-icon">${rankEmoji}</div>
+                        <div class="rank-number">#${rank}</div>
+                    </div>
+                    <div class="leader-avatar">
+                        ${u.photo_url
+                            ? `<img src="${escapeHtml(u.photo_url)}" alt="${escapeHtml(name)}">`
+                            : `<span>${escapeHtml(initial)}</span>`
+                        }
+                    </div>
+                    <div class="leader-info">
+                        <div class="leader-name">${escapeHtml(name)}</div>
+                        <div class="leader-stats">
+                            ${u.referral_count} total • ${u.qualifiedReferrals} qualified
+                        </div>
+                    </div>
+                    <div class="leader-count">
+                        <div class="count-number"><i class="fas fa-users"></i> ${u.qualifiedReferrals}</div>
+                        <div class="count-label">QUALIFIED</div>
+                    </div>
+                </div>`;
+        });
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
         // ==========================================
         // DISPLAY CURRENT MILESTONE
         // ==========================================
