@@ -1291,836 +1291,825 @@
         </a>
     </nav>
 
-    This is html, up only the script don't add anything else don't add the example don't remove anything from the code just update the error don't remove anything that is not the error
-Update this code and give me full code this code is having an error inside it when I tried it I'm seeing too much double size which is not corresponding with telegram web app which is telegram many app and it's not showing the Right thing to update it example like this\
-this example don't add this it only example to show you what is happening in The script
-example\
-🎉 Miner Activated!\
-💎 Nano Miner\
-⚡ Earnings: $0.5$$ {miner.crypto}/hour\
-⏱️ Duration: 24 hours\
-💰 Total Earnings: $12.00$$ {miner.crypto}\
-Mining will complete at: 10/28/2025, 11:24:52 PM
-update only here this script
-<script>\
-        // ==========================================\
-        // CONFIGURATION - REPLACE WITH YOUR VALUES\
-        // ==========================================\
-        const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';\
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';\
-        const TELEGRAM_BOT_USERNAME = 'StreamPerksBot'; // Without @
-        // Initialize Supabase\
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        // Initialize Telegram WebApp\
-        const tg = window.Telegram.WebApp;\
-        tg.ready();\
-        tg.expand();\
-     \
-        let currentUser = null;\
-        let referralBonusAmount = 0;\
-        let currentTab = 'invite';\
-        let qualifiedReferralsCache = {};\
-        let claimedMilestonesCache = {};\
-     \
-        // Milestone rewards configuration\
-        const MILESTONES = [\
-            { target: 10, pex: 2000, usdt: 0.2 },\
-            { target: 25, pex: 5000, usdt: 0.5 },\
-            { target: 50, pex: 10000, usdt: 1 },\
-            { target: 100, pex: 25000, usdt: 2.5 },\
-            { target: 200, pex: 60000, usdt: 6 },\
-            { target: 300, pex: 100000, usdt: 10 }\
-        ];
-        // ==========================================\
-        // TAB SWITCHING\
-        // ==========================================\
-        function switchTab(tabName) {\
-            currentTab = tabName;\
-         \
-            // Update tab buttons\
-            document.querySelectorAll('.tab').forEach(tab => {\
-                tab.classList.remove('active');\
-            });\
-            event.target.closest('.tab').classList.add('active');\
-         \
-            // Update tab content\
-            document.querySelectorAll('.tab-content').forEach(content => {\
-                content.classList.remove('active');\
-            });\
-            document.getElementById(`${tabName}Tab`).classList.add('active');\
-         \
-            // Load tab-specific data\
-            if (tabName === 'leaderboard') {\
-                loadLeaderboard();\
-            } else if (tabName === 'milestones') {\
-                loadMilestones();\
-            }\
-         \
-            if (tg.HapticFeedback) {\
-                tg.HapticFeedback.impactOccurred('light');\
-            }\
-        }
-        // ==========================================\
-        // INITIALIZATION\
-        // ==========================================\
-        document.addEventListener('DOMContentLoaded', async () => {\
-            if (TELEGRAM_BOT_USERNAME === 'YOUR_BOT_USERNAME') {\
-                showMessage('App configuration error. Please contact support.', 'error');\
-                console.error('CRITICAL: Bot username not configured');\
-                return;\
-            }\
-          \
-            await initializeUser();\
-            await loadBonusSettings();\
-            generateInviteLink();\
-            await loadUserStats();\
-            await loadReferredUsers();\
-        });
-        // ==========================================\
-        // USER INITIALIZATION\
-        // ==========================================\
-        async function initializeUser() {\
-            try {\
-                const user = tg.initDataUnsafe?.user;\
-             \
-                if (!user) {\
-                    showMessage('Please open this app from Telegram', 'error');\
-                    return;\
-                }\
-             \
-                currentUser = user;\
-                console.log('Current user initialized:', currentUser.id);\
-              \
-                // Check if user exists in database\
-                const { data: existingUser, error } = await supabase\
-                    .from('users')\
-                    .select('*')\
-                    .eq('telegram_id', user.id)\
-                    .single();\
-              \
-                if (error && error.code !== 'PGRST116') {\
-                    console.error('Error fetching user:', error);\
-                    return;\
-                }\
-              \
-                if (!existingUser) {\
-                    // Create new user and check for referrer\
-                    const newUser = await createUser(user);\
-                    if (newUser) {\
-                        await checkForReferrer();\
-                    }\
-                } else {\
-                    // User exists, check if they came via referral link but haven't been credited yet\
-                    if (!existingUser.referrer_id) {\
-                        await checkForReferrer();\
-                    }\
-                }\
-            } catch (error) {\
-                console.error('Error initializing user:', error);\
-                showMessage('Failed to initialize user', 'error');\
-            }\
-        }
-        // ==========================================\
-        // CREATE NEW USER\
-        // ==========================================\
-        async function createUser(user) {\
-            try {\
-                console.log('Creating new user:', user.id);\
-             \
-                const { data, error } = await supabase\
-                    .from('users')\
-                    .insert([{\
-                        telegram_id: user.id,\
-                        username: user.username || null,\
-                        first_name: user.first_name || 'User',\
-                        last_name: user.last_name || null,\
-                        photo_url: user.photo_url || null,\
-                        balance: 0,\
-                        referral_count: 0,\
-                        total_earned: 0,\
-                        total_withdrawn: 0\
-                    }])\
-                    .select()\
-                    .single();\
-              \
-                if (error) {\
-                    console.error('Error creating user:', error);\
-                    throw error;\
-                }\
-             \
-                console.log('New user created successfully:', data);\
-                return data;\
-            } catch (error) {\
-                console.error('Error in createUser:', error);\
-                return null;\
-            }\
-        }
-        // ==========================================\
-        // LOAD BONUS SETTINGS\
-        // ==========================================\
-        async function loadBonusSettings() {\
-            try {\
-                // Load referral bonus\
-                const { data: referralData, error: referralError } = await supabase\
-                    .from('settings')\
-                    .select('setting_value')\
-                    .eq('setting_key', 'referral_bonus')\
-                    .single();\
-              \
-                if (!referralError && referralData) {\
-                    referralBonusAmount = parseFloat(referralData.setting_value) || 1;\
-                } else {\
-                    referralBonusAmount = 1;\
-                }\
-             \
-                console.log('Referral bonus loaded:', referralBonusAmount);\
-            } catch (error) {\
-                console.error('Error loading bonus settings:', error);\
-                referralBonusAmount = 1;\
-            }\
-        }
-        // ==========================================\
-        // GENERATE INVITE LINK\
-        // ==========================================\
-        function generateInviteLink() {\
-            if (!currentUser) return;\
-         \
-            const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/Perks?startapp=${currentUser.id}`;\
-            document.getElementById('inviteLink').textContent = inviteLink;\
-            console.log('Invite link generated:', inviteLink);\
-        }
-        // ==========================================\
-        // COPY INVITE LINK\
-        // ==========================================\
-        async function copyInviteLink() {\
-            const inviteLink = document.getElementById('inviteLink').textContent;\
-            if (inviteLink === 'Loading...') return;\
-          \
-            try {\
-                if (navigator.clipboard && navigator.clipboard.writeText) {\
-                    await navigator.clipboard.writeText(inviteLink);\
-                } else {\
-                    const textArea = document.createElement('textarea');\
-                    textArea.value = inviteLink;\
-                    textArea.style.position = 'fixed';\
-                    textArea.style.left = '-999999px';\
-                    document.body.appendChild(textArea);\
-                    textArea.select();\
-                    document.execCommand('copy');\
-                    document.body.removeChild(textArea);\
-                }\
-              \
-                showMessage('Invite link copied to clipboard!', 'success');\
-             \
-                if (tg.HapticFeedback) {\
-                    tg.HapticFeedback.notificationOccurred('success');\
-                }\
-            } catch (error) {\
-                console.error('Error copying to clipboard:', error);\
-                showMessage('Failed to copy link', 'error');\
-            }\
-        }
-        // ==========================================\
-        // SHARE INVITE LINK\
-        // ==========================================\
-        function shareInviteLink() {\
-            const inviteLink = document.getElementById('inviteLink').textContent;\
-            if (inviteLink === 'Loading...') return;\
-          \
-            const shareText = `Join me on StreamPerks and start earning rewards!\n\nGet bonus Perks when you sign up using my link!\n\n`;\
-          \
-            if (tg.openTelegramLink) {\
-                tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);\
-            } else {\
-                window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`, '_blank');\
-            }\
-          \
-            if (tg.HapticFeedback) {\
-                tg.HapticFeedback.impactOccurred('medium');\
-            }\
-        }
-        // ==========================================\
-        // CHECK FOR REFERRER\
-        // ==========================================\
-        async function checkForReferrer() {\
-            try {\
-                const startParam = tg.initDataUnsafe?.start_param;\
-                console.log('Start param detected:', startParam);\
-             \
-                if (!startParam || !currentUser) {\
-                    console.log('No start param or current user');\
-                    return;\
-                }\
-              \
-                const referrerId = parseInt(startParam);\
-                console.log('Referrer ID:', referrerId, 'Current User ID:', currentUser.id);\
-             \
-                // Don't allow self-referral\
-                if (referrerId === currentUser.id) {\
-                    console.log('Self-referral detected, ignoring');\
-                    return;\
-                }\
-              \
-                // Check if current user already has a referrer\
-                const { data: userData, error: userError } = await supabase\
-                    .from('users')\
-                    .select('referrer_id, balance, total_earned')\
-                    .eq('telegram_id', currentUser.id)\
-                    .single();\
-              \
-                if (userError) {\
-                    console.error('Error fetching user data:', userError);\
-                    throw userError;\
-                }\
-             \
-                console.log('Current user data:', userData);\
-              \
-                // If user already has a referrer, don't process again\
-                if (userData.referrer_id) {\
-                    console.log('User already has a referrer:', userData.referrer_id);\
-                    return;\
-                }\
-              \
-                // Verify referrer exists\
-                const { data: referrerData, error: referrerCheckError } = await supabase\
-                    .from('users')\
-                    .select('telegram_id')\
-                    .eq('telegram_id', referrerId)\
-                    .single();\
-              \
-                if (referrerCheckError || !referrerData) {\
-                    console.log('Referrer not found in database:', referrerId);\
-                    return;\
-                }\
-              \
-                console.log('Setting referrer (pending qualification):', referrerId);\
-                await setReferrer(referrerId);\
-            } catch (error) {\
-                console.error('Error checking referrer:', error);\
-            }\
-        }
-        // ==========================================\
-        // SET REFERRER (without immediate reward)\
-        // ==========================================\
-        async function setReferrer(referrerId) {\
-            try {\
-                console.log('Setting referrer for user:', currentUser.id);\
-              \
-                // Update current user's referrer_id only\
-                const { error: updateError } = await supabase\
-                    .from('users')\
-                    .update({ referrer_id: referrerId })\
-                    .eq('telegram_id', currentUser.id);\
-              \
-                if (updateError) {\
-                    console.error('Error updating referrer_id:', updateError);\
-                    throw updateError;\
-                }\
-              \
-                // Increment referrer's referral_count\
-                const { error: countError } = await supabase.rpc('increment_referral_count', {\
-                    user_telegram_id: referrerId\
-                });\
-              \
-                if (countError) {\
-                    console.error('Error incrementing referral count:', countError);\
-                }\
-              \
-                console.log('Referrer set successfully. Awaiting ad watch qualification.');\
-                showMessage('Welcome! Watch your first ad to qualify your referrer for rewards!', 'success');\
-              \
-                // Reload stats\
-                await loadUserStats();\
-            } catch (error) {\
-                console.error('Error setting referrer:', error);\
-                showMessage('Error processing referral', 'error');\
-            }\
-        }
-        // ==========================================\
-        // COUNT QUALIFIED REFERRALS (OPTIMIZED)\
-        // ==========================================\
-        async function countQualifiedReferrals(userId) {\
-            try {\
-                // Check cache first\
-                if (qualifiedReferralsCache[userId] !== undefined) {\
-                    return qualifiedReferralsCache[userId];\
-                }\
-              \
-                // Use optimized query with join\
-                const { data, error } = await supabase\
-                    .from('users')\
-                    .select('telegram_id')\
-                    .eq('referrer_id', userId);\
-              \
-                if (error) throw error;\
-              \
-                if (!data || data.length === 0) {\
-                    qualifiedReferralsCache[userId] = 0;\
-                    return 0;\
-                }\
-              \
-                // Get qualified referrals (users who watched at least 1 ad)\
-                const referralIds = data.map(r => r.telegram_id);\
-              \
-                const { data: qualifiedData, error: qualifiedError } = await supabase\
-                    .from('user_ads')\
-                    .select('user_id')\
-                    .in('user_id', referralIds);\
-              \
-                if (qualifiedError) throw qualifiedError;\
-              \
-                // Count unique qualified users\
-                const uniqueQualified = new Set(qualifiedData?.map(ad => ad.user_id) || []);\
-                const qualifiedCount = uniqueQualified.size;\
-              \
-                // Cache the result\
-                qualifiedReferralsCache[userId] = qualifiedCount;\
-              \
-                return qualifiedCount;\
-            } catch (error) {\
-                console.error('Error counting qualified referrals:', error);\
-                return 0;\
-            }\
-        }
-        // ==========================================\
-        // GET CLAIMED MILESTONES\
-        // ==========================================\
-        async function getClaimedMilestones(userId) {\
-            try {\
-                // Check cache first\
-                if (claimedMilestonesCache[userId] !== undefined) {\
-                    return claimedMilestonesCache[userId];\
-                }
-                const { data, error } = await supabase\
-                    .from('milestone_claims')\
-                    .select('milestone_target')\
-                    .eq('user_id', userId);
-                if (error) throw error;
-                const claimedTargets = data ? data.map(claim => claim.milestone_target) : [];\
-               \
-                // Cache the result\
-                claimedMilestonesCache[userId] = claimedTargets;\
-               \
-                return claimedTargets;\
-            } catch (error) {\
-                console.error('Error fetching claimed milestones:', error);\
-                return [];\
-            }\
-        }
-        // ==========================================\
-        // CLAIM MILESTONE REWARD\
-        // ==========================================\
-        async function claimMilestone(milestoneTarget, pexReward, usdtReward) {\
-            try {\
-                if (!currentUser) {\
-                    showMessage('User not initialized', 'error');\
-                    return false;\
-                }
-                // Get user's database ID\
-                const { data: userData, error: userError } = await supabase\
-                    .from('users')\
-                    .select('id, balance')\
-                    .eq('telegram_id', currentUser.id)\
-                    .single();
-                if (userError) throw userError;
-                // Check if already claimed\
-                const { data: existingClaim, error: claimCheckError } = await supabase\
-                    .from('milestone_claims')\
-                    .select('id')\
-                    .eq('user_id', userData.id)\
-                    .eq('milestone_target', milestoneTarget)\
-                    .single();
-                if (existingClaim) {\
-                    showMessage('This milestone has already been claimed!', 'error');\
-                    return false;\
-                }
-                // Insert milestone claim record\
-                const { error: insertError } = await supabase\
-                    .from('milestone_claims')\
-                    .insert([{\
-                        user_id: userData.id,\
-                        milestone_target: milestoneTarget,\
-                        pex_reward: pexReward,\
-                        usdt_reward: usdtReward\
-                    }]);
-                if (insertError) throw insertError;
-                // Update user balance (add PEX reward)\
-                const newBalance = parseFloat(userData.balance) + parseFloat(pexReward);\
-                const { error: updateError } = await supabase\
-                    .from('users')\
-                    .update({\
-                        balance: newBalance,\
-                        total_earned: supabase.sql`total_earned + ${pexReward}`\
-                    })\
-                    .eq('id', userData.id);
-                if (updateError) throw updateError;
-                // Clear cache\
-                claimedMilestonesCache[currentUser.id] = undefined;
-                showMessage(`🎉 Milestone claimed! You earned ${pexReward} PEX and $${usdtReward} USDT!`, 'success');\
-               \
-                if (tg.HapticFeedback) {\
-                    tg.HapticFeedback.notificationOccurred('success');\
-                }
-                // Reload milestones and stats\
-                await loadMilestones();\
-                await loadUserStats();
-                return true;\
-            } catch (error) {\
-                console.error('Error claiming milestone:', error);\
-                showMessage('Failed to claim milestone. Please try again.', 'error');\
-                return false;\
-            }\
-        }
-        // ==========================================\
-        // LOAD USER STATS\
-        // ==========================================\
-        async function loadUserStats() {\
-            try {\
-                if (!currentUser) return;
-                const { data, error } = await supabase\
-                    .from('users')\
-                    .select('referral_count')\
-                    .eq('telegram_id', currentUser.id)\
-                    .single();
-                if (error) throw error;
-                const totalReferrals = data?.referral_count || 0;\
-                const qualifiedCount = await countQualifiedReferrals(currentUser.id);
-                // Update stats display\
-                document.getElementById('referralCount').textContent = totalReferrals;\
-                document.getElementById('qualifiedCount').textContent = qualifiedCount;\
-                document.getElementById('qualifiedCountMilestone').textContent = qualifiedCount;
-                // Calculate milestone earnings\
-                const claimedMilestones = await getClaimedMilestones(currentUser.id);\
-                let totalMilestoneEarnings = 0;\
-                claimedMilestones.forEach(target => {\
-                    const milestone = MILESTONES.find(m => m.target === target);\
-                    if (milestone) {\
-                        totalMilestoneEarnings += milestone.pex;\
-                    }\
-                });\
-                document.getElementById('milestoneEarnings').textContent = totalMilestoneEarnings;
-                console.log('User stats loaded:', { totalReferrals, qualifiedCount, milestoneEarnings: totalMilestoneEarnings });\
-            } catch (error) {\
-                console.error('Error loading user stats:', error);\
-            }\
-        }
-        // ==========================================\
-        // LOAD REFERRED USERS\
-        // ==========================================\
-        async function loadReferredUsers() {\
-            try {\
-                if (!currentUser) return;
-                const container = document.getElementById('referredUsersContainer');\
-                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading referrals...</p></div>';
-                // Get all referrals\
-                const { data: referrals, error } = await supabase\
-                    .from('users')\
-                    .select('telegram_id, first_name, last_name, username, created_at')\
-                    .eq('referrer_id', currentUser.id)\
-                    .order('created_at', { ascending: false });
-                if (error) throw error;
-                if (!referrals || referrals.length === 0) {\
-                    container.innerHTML = `\
-                        <div class="empty-state">\
-                            <i class="fas fa-user-friends"></i>\
-                            <h3>No Referrals Yet</h3>\
-                            <p>Share your invite link to start earning!</p>\
-                        </div>\
-                    `;\
-                    return;\
-                }
-                // Get qualified status for each referral\
-                const referralIds = referrals.map(r => r.telegram_id);\
-                const { data: adsData, error: adsError } = await supabase\
-                    .from('user_ads')\
-                    .select('user_id')\
-                    .in('user_id', referralIds);
-                if (adsError) throw adsError;
-                const qualifiedUserIds = new Set(adsData?.map(ad => ad.user_id) || []);
-                // Build referrals HTML\
-                let html = '';\
-                referrals.forEach(referral => {\
-                    const isQualified = qualifiedUserIds.has(referral.telegram_id);\
-                    const displayName = referral.first_name + (referral.last_name ? ' ' + referral.last_name : '');\
-                    const joinDate = new Date(referral.created_at).toLocaleDateString();\
-                    const statusClass = isQualified ? 'qualified' : 'pending';\
-                    const statusIcon = isQualified ? 'fa-check-circle' : 'fa-clock';\
-                    const statusText = isQualified ? 'Qualified' : 'Pending';\
-                    const statusColor = isQualified ? '#00ff96' : '#ffc107';
-                    html += `\
-                        <div class="user-item ${statusClass}">\
-                            <div class="user-avatar">\
-                                ${displayName.charAt(0).toUpperCase()}\
-                            </div>\
-                            <div class="user-info">\
-                                <div class="user-name">${displayName}</div>\
-                                <div class="user-details">\
-                                    ${referral.username ? `@${referral.username}` : 'No username'} • Joined ${joinDate}\
-                                </div>\
-                            </div>\
-                            <div class="user-status" style="color: ${statusColor}">\
-                                <i class="fas ${statusIcon}"></i> ${statusText}\
-                            </div>\
-                        </div>\
-                    `;\
-                });
-                container.innerHTML = html;\
-            } catch (error) {\
-                console.error('Error loading referred users:', error);\
-                document.getElementById('referredUsersContainer').innerHTML = `\
-                    <div class="empty-state">\
-                        <i class="fas fa-exclamation-triangle"></i>\
-                        <h3>Error Loading Referrals</h3>\
-                        <p>Please try again later</p>\
-                    </div>\
-                `;\
-            }\
-        }
-        // ==========================================\
-        // LOAD LEADERBOARD\
-        // ==========================================\
-        async function loadLeaderboard() {\
-            try {\
-                const container = document.getElementById('leaderboardContainer');\
-                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading leaderboard...</p></div>';
-                // Get all users with their qualified referral counts\
-                const { data: users, error } = await supabase\
-                    .from('users')\
-                    .select('telegram_id, first_name, last_name, username, referral_count')\
-                    .order('referral_count', { ascending: false })\
-                    .limit(100);
-                if (error) throw error;
-                if (!users || users.length === 0) {\
-                    container.innerHTML = `\
-                        <div class="empty-state">\
-                            <i class="fas fa-trophy"></i>\
-                            <h3>No Data Yet</h3>\
-                            <p>Be the first to invite friends!</p>\
-                        </div>\
-                    `;\
-                    return;\
-                }
-                // Calculate qualified referrals for top users\
-                const usersWithQualified = await Promise.all(\
-                    users.map(async (user) => {\
-                        const qualifiedCount = await countQualifiedReferrals(user.telegram_id);\
-                        return { ...user, qualified_count: qualifiedCount };\
-                    })\
-                );
-                // Sort by qualified referrals\
-                usersWithQualified.sort((a, b) => b.qualified_count - a.qualified_count);
-                // Display current user milestone if in invite tab\
-                if (currentUser) {\
-                    const currentUserData = usersWithQualified.find(u => u.telegram_id === currentUser.id);\
-                    if (currentUserData && currentUserData.qualified_count > 0) {\
-                        displayCurrentMilestone(currentUserData.qualified_count);\
-                    }\
-                }
-                // Build leaderboard HTML\
-                let html = '';\
-                usersWithQualified.forEach((user, index) => {\
-                    const rank = index + 1;\
-                    const displayName = user.first_name + (user.last_name ? ' ' + user.last_name : '');\
-                    const isCurrentUser = currentUser && user.telegram_id === currentUser.id;\
-                    const rankClass = rank <= 3 ? `rank-${rank}` : '';\
-                    const currentUserClass = isCurrentUser ? 'current-user' : '';
-                    let rankDisplay = rank;\
-                    if (rank === 1) rankDisplay = '🥇';\
-                    else if (rank === 2) rankDisplay = '🥈';\
-                    else if (rank === 3) rankDisplay = '🥉';
-                    html += `\
-                        <div class="leaderboard-item $${rankClass}$$ {currentUserClass}">\
-                            <div class="leaderboard-rank">${rankDisplay}</div>\
-                            <div class="user-avatar small">\
-                                ${displayName.charAt(0).toUpperCase()}\
-                            </div>\
-                            <div class="leaderboard-info">\
-                                <div class="user-name">${displayName}</div>\
-                                <div class="user-stats">\
-                                    <span><i class="fas fa-users"></i> ${user.referral_count} total</span>\
-                                    <span><i class="fas fa-user-check"></i> ${user.qualified_count} qualified</span>\
-                                </div>\
-                            </div>\
-                        </div>\
-                    `;\
-                });
-                container.innerHTML = html;
-            } catch (error) {\
-                console.error('Error loading leaderboard:', error);\
-                document.getElementById('leaderboardContainer').innerHTML = `\
-                    <div class="empty-state">\
-                        <i class="fas fa-exclamation-triangle"></i>\
-                        <h3>Error Loading Leaderboard</h3>\
-                        <p>Please try again later</p>\
-                    </div>\
-                `;\
-            }\
-        }
-        // ==========================================\
-        // DISPLAY CURRENT MILESTONE\
-        // ==========================================\
-        function displayCurrentMilestone(qualifiedCount) {\
-            const container = document.getElementById('currentMilestoneDisplay');\
-           \
-            // Find current milestone\
-            let currentMilestone = null;\
-            let progress = 0;\
-           \
-            for (let i = 0; i < MILESTONES.length; i++) {\
-                if (qualifiedCount < MILESTONES[i].target) {\
-                    currentMilestone = MILESTONES[i];\
-                    progress = (qualifiedCount / currentMilestone.target) * 100;\
-                    break;\
-                }\
-            }
-            // If all milestones completed\
-            if (!currentMilestone) {\
-                currentMilestone = MILESTONES[MILESTONES.length - 1];\
-                progress = 100;\
-            }
-            const remaining = Math.max(0, currentMilestone.target - qualifiedCount);
-            container.innerHTML = `\
-                <div class="milestone-card ${progress === 100 ? 'completed' : ''}">\
-                    <div class="milestone-icon">${progress === 100 ? '🏆' : '🎯'}</div>\
-                    <h3>${progress === 100 ? 'Milestone Completed!' : 'Next Milestone'}</h3>\
-                    <p>${currentMilestone.target} Qualified Referrals</p>\
-                    <div class="milestone-progress-container">\
-                        <div class="progress-bar">\
-                            <div class="progress-fill" style="width: ${progress}%"></div>\
-                        </div>\
-                        <div class="progress-text">$${qualifiedCount} /$$ {currentMilestone.target}</div>\
-                    </div>\
-                    ${progress < 100 ? `<p style="margin-top: 10px; color: var(--text-secondary);">${remaining} more qualified referrals needed</p>` : ''}\
-                    <div class="milestone-reward">\
-                        <div><i class="fas fa-coins"></i> ${currentMilestone.pex} PEX</div>\
-                        <div><i class="fas fa-dollar-sign"></i> ${currentMilestone.usdt} USDT</div>\
-                    </div>\
-                </div>\
-            `;\
-        }
-        // ==========================================\
-        // LOAD MILESTONES\
-        // ==========================================\
-        async function loadMilestones() {\
-            try {\
-                if (!currentUser) return;
-                const container = document.getElementById('milestonesContainer');\
-                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading milestones...</p></div>';
-                const qualifiedCount = await countQualifiedReferrals(currentUser.id);\
-                const claimedMilestones = await getClaimedMilestones(currentUser.id);
-                let html = '<div class="milestone-list">';
-                MILESTONES.forEach((milestone, index) => {\
-                    const isCompleted = qualifiedCount >= milestone.target;\
-                    const isClaimed = claimedMilestones.includes(milestone.target);\
-                    const isCurrent = !isCompleted && (index === 0 || qualifiedCount >= MILESTONES[index - 1].target);\
-                    const isLocked = !isCompleted && !isCurrent;
-                    let statusClass = '';\
-                    let statusIcon = '';\
-                    let statusText = '';\
-                    let actionButton = '';
-                    if (isClaimed) {\
-                        statusClass = 'completed';\
-                        statusIcon = '✅';\
-                        statusText = 'Claimed';\
-                    } else if (isCompleted) {\
-                        statusClass = 'completed';\
-                        statusIcon = '🎁';\
-                        statusText = 'Ready to Claim!';\
-                        actionButton = `<button class="btn btn-primary" onclick="claimMilestone($${milestone.target},$$ {milestone.pex}, ${milestone.usdt})" style="margin-top: 15px; width: 100%;"><i class="fas fa-gift"></i> Claim Reward</button>`;\
-                    } else if (isCurrent) {\
-                        statusClass = 'current';\
-                        statusIcon = '🎯';\
-                        const remaining = milestone.target - qualifiedCount;\
-                        statusText = `${remaining} more qualified referrals needed`;\
-                    } else {\
-                        statusClass = 'locked';\
-                        statusIcon = '🔒';\
-                        statusText = 'Locked';\
-                    }
-                    const progress = Math.min(100, (qualifiedCount / milestone.target) * 100);
-                    html += `\
-                        <div class="milestone-item ${statusClass}">\
-                            <div class="milestone-icon-small">${statusIcon}</div>\
-                            <div style="flex: 1;">\
-                                <div class="milestone-title">\
-                                    <h3>${milestone.target} Qualified Referrals</h3>\
-                                    <p style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">${statusText}</p>\
-                                </div>\
-                                <div class="milestone-rewards">\
-                                    <div class="reward-item">\
-                                        <i class="fas fa-coins"></i>\
-                                        <span>${milestone.pex} PEX</span>\
-                                    </div>\
-                                    <div class="reward-item">\
-                                        <i class="fas fa-dollar-sign"></i>\
-                                        <span>${milestone.usdt} USDT</span>\
-                                    </div>\
-                                </div>\
-                                ${!isLocked ? `\
-                                    <div class="milestone-progress-container" style="margin-top: 10px;">\
-                                        <div class="progress-bar">\
-                                            <div class="progress-fill" style="width: ${progress}%"></div>\
-                                        </div>\
-                                        <div class="progress-text">$${qualifiedCount} /$$ {milestone.target}</div>\
-                                    </div>\
-                                ` : ''}\
-                                ${actionButton}\
-                            </div>\
-                        </div>\
-                    `;\
-                });
-                html += '</div>';\
-                container.innerHTML = html;
-            } catch (error) {\
-                console.error('Error loading milestones:', error);\
-                document.getElementById('milestonesContainer').innerHTML = `\
-                    <div class="empty-state">\
-                        <i class="fas fa-exclamation-triangle"></i>\
-                        <h3>Error Loading Milestones</h3>\
-                        <p>Please try again later</p>\
-                    </div>\
-                `;\
-            }\
-        }
-        // ==========================================\
-        // SHOW MESSAGE\
-        // ==========================================\
-        function showMessage(message, type = 'info') {\
-            const container = document.getElementById('messageContainer');\
-            const messageEl = document.createElement('div');\
-            messageEl.className = `message message-${type}`;\
-           \
-            let icon = 'fa-info-circle';\
-            if (type === 'success') icon = 'fa-check-circle';\
-            else if (type === 'error') icon = 'fa-exclamation-circle';\
-            else if (type === 'warning') icon = 'fa-exclamation-triangle';\
-           \
-            messageEl.innerHTML = `\
-                <i class="fas ${icon}"></i>\
-                <span>${message}</span>\
-            `;\
-           \
-            container.appendChild(messageEl);\
-           \
-            setTimeout(() => {\
-                messageEl.style.animation = 'slideOut 0.3s ease-out forwards';\
-                setTimeout(() => messageEl.remove(), 300);\
-            }, 5000);\
-        }
-        // ==========================================\
-        // PERIODIC UPDATES\
-        // ==========================================\
-        setInterval(async () => {\
-            if (currentTab === 'invite') {\
-                await loadUserStats();\
-                await loadReferredUsers();\
-            } else if (currentTab === 'leaderboard') {\
-                await loadLeaderboard();\
-            } else if (currentTab === 'milestones') {\
-                await loadMilestones();\
-            }\
-        }, 30000); // Update every 30 seconds\
-    </script>
+    <script>
+        // ==========================================
+        // CONFIGURATION - REPLACE WITH YOUR VALUES
+        // ==========================================
+        const SUPABASE_URL = 'https://xxontbljncxjvznrxnkv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b250YmxqbmN4anZ6bnJ4bmt2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NDY5MzUsImV4cCI6MjA3NzUyMjkzNX0.vK5cqDjisZ-u5peKFBnVQEsPDcSTqjx9uIni9J7S0p4';
+        const TELEGRAM_BOT_USERNAME = 'StreamPerksBot'; // Without @
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+     
+        let currentUser = null;
+        let referralBonusAmount = 0;
+        let currentTab = 'invite';
+        let qualifiedReferralsCache = {};
+        let claimedMilestonesCache = {};
+     
+        // Milestone rewards configuration
+        const MILESTONES = [
+            { target: 10, pex: 2000, usdt: 0.2 },
+            { target: 25, pex: 5000, usdt: 0.5 },
+            { target: 50, pex: 10000, usdt: 1 },
+            { target: 100, pex: 25000, usdt: 2.5 },
+            { target: 200, pex: 60000, usdt: 6 },
+            { target: 300, pex: 100000, usdt: 10 }
+        ];
+        // ==========================================
+        // TAB SWITCHING
+        // ==========================================
+        function switchTab(tabName) {
+            currentTab = tabName;
+         
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.closest('.tab').classList.add('active');
+         
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+         
+            // Load tab-specific data
+            if (tabName === 'leaderboard') {
+                loadLeaderboard();
+            } else if (tabName === 'milestones') {
+                loadMilestones();
+            }
+         
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+        // ==========================================
+        // INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (TELEGRAM_BOT_USERNAME === 'YOUR_BOT_USERNAME') {
+                showMessage('App configuration error. Please contact support.', 'error');
+                console.error('CRITICAL: Bot username not configured');
+                return;
+            }
+          
+            await initializeUser();
+            await loadBonusSettings();
+            generateInviteLink();
+            await loadUserStats();
+            await loadReferredUsers();
+        });
+        // ==========================================
+        // USER INITIALIZATION
+        // ==========================================
+        async function initializeUser() {
+            try {
+                const user = tg.initDataUnsafe?.user;
+             
+                if (!user) {
+                    showMessage('Please open this app from Telegram', 'error');
+                    return;
+                }
+             
+                currentUser = user;
+                console.log('Current user initialized:', currentUser.id);
+              
+                // Check if user exists in database
+                const { data: existingUser, error } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('telegram_id', user.id)
+                    .single();
+              
+                if (error && error.code !== 'PGRST116') {
+                    console.error('Error fetching user:', error);
+                    return;
+                }
+              
+                if (!existingUser) {
+                    // Create new user and check for referrer
+                    const newUser = await createUser(user);
+                    if (newUser) {
+                        await checkForReferrer();
+                    }
+                } else {
+                    // User exists, check if they came via referral link but haven't been credited yet
+                    if (!existingUser.referrer_id) {
+                        await checkForReferrer();
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing user:', error);
+                showMessage('Failed to initialize user', 'error');
+            }
+        }
+        // ==========================================
+        // CREATE NEW USER
+        // ==========================================
+        async function createUser(user) {
+            try {
+                console.log('Creating new user:', user.id);
+             
+                const { data, error } = await supabase
+                    .from('users')
+                    .insert([{
+                        telegram_id: user.id,
+                        username: user.username || null,
+                        first_name: user.first_name || 'User',
+                        last_name: user.last_name || null,
+                        photo_url: user.photo_url || null,
+                        balance: 0,
+                        referral_count: 0,
+                        total_earned: 0,
+                        total_withdrawn: 0
+                    }])
+                    .select()
+                    .single();
+              
+                if (error) {
+                    console.error('Error creating user:', error);
+                    throw error;
+                }
+             
+                console.log('New user created successfully:', data);
+                return data;
+            } catch (error) {
+                console.error('Error in createUser:', error);
+                return null;
+            }
+        }
+        // ==========================================
+        // LOAD BONUS SETTINGS
+        // ==========================================
+        async function loadBonusSettings() {
+            try {
+                // Load referral bonus
+                const { data: referralData, error: referralError } = await supabase
+                    .from('settings')
+                    .select('setting_value')
+                    .eq('setting_key', 'referral_bonus')
+                    .single();
+              
+                if (!referralError && referralData) {
+                    referralBonusAmount = parseFloat(referralData.setting_value) || 1;
+                } else {
+                    referralBonusAmount = 1;
+                }
+             
+                console.log('Referral bonus loaded:', referralBonusAmount);
+            } catch (error) {
+                console.error('Error loading bonus settings:', error);
+                referralBonusAmount = 1;
+            }
+        }
+        // ==========================================
+        // GENERATE INVITE LINK
+        // ==========================================
+        function generateInviteLink() {
+            if (!currentUser) return;
+         
+            const inviteLink = `https://t.me/${TELEGRAM_BOT_USERNAME}/Perks?startapp=${currentUser.id}`;
+            document.getElementById('inviteLink').textContent = inviteLink;
+            console.log('Invite link generated:', inviteLink);
+        }
+        // ==========================================
+        // COPY INVITE LINK
+        // ==========================================
+        async function copyInviteLink() {
+            const inviteLink = document.getElementById('inviteLink').textContent;
+            if (inviteLink === 'Loading...') return;
+          
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(inviteLink);
+                } else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = inviteLink;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                }
+              
+                showMessage('Invite link copied to clipboard!', 'success');
+             
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+                showMessage('Failed to copy link', 'error');
+            }
+        }
+        // ==========================================
+        // SHARE INVITE LINK
+        // ==========================================
+        function shareInviteLink() {
+            const inviteLink = document.getElementById('inviteLink').textContent;
+            if (inviteLink === 'Loading...') return;
+          
+            const shareText = `Join me on StreamPerks and start earning rewards!\n\nGet bonus Perks when you sign up using my link!\n\n`;
+          
+            if (tg.openTelegramLink) {
+                tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`);
+            } else {
+                window.open(`https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent(shareText)}`, '_blank');
+            }
+          
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+        }
+        // ==========================================
+        // CHECK FOR REFERRER
+        // ==========================================
+        async function checkForReferrer() {
+            try {
+                const startParam = tg.initDataUnsafe?.start_param;
+                console.log('Start param detected:', startParam);
+             
+                if (!startParam || !currentUser) {
+                    console.log('No start param or current user');
+                    return;
+                }
+              
+                const referrerId = parseInt(startParam);
+                console.log('Referrer ID:', referrerId, 'Current User ID:', currentUser.id);
+             
+                // Don't allow self-referral
+                if (referrerId === currentUser.id) {
+                    console.log('Self-referral detected, ignoring');
+                    return;
+                }
+              
+                // Check if current user already has a referrer
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('referrer_id, balance, total_earned')
+                    .eq('telegram_id', currentUser.id)
+                    .single();
+              
+                if (userError) {
+                    console.error('Error fetching user data:', userError);
+                    throw userError;
+                }
+             
+                console.log('Current user data:', userData);
+              
+                // If user already has a referrer, don't process again
+                if (userData.referrer_id) {
+                    console.log('User already has a referrer:', userData.referrer_id);
+                    return;
+                }
+              
+                // Verify referrer exists
+                const { data: referrerData, error: referrerCheckError } = await supabase
+                    .from('users')
+                    .select('telegram_id')
+                    .eq('telegram_id', referrerId)
+                    .single();
+              
+                if (referrerCheckError || !referrerData) {
+                    console.log('Referrer not found in database:', referrerId);
+                    return;
+                }
+              
+                console.log('Setting referrer (pending qualification):', referrerId);
+                await setReferrer(referrerId);
+            } catch (error) {
+                console.error('Error checking referrer:', error);
+            }
+        }
+        // ==========================================
+        // SET REFERRER (without immediate reward)
+        // ==========================================
+        async function setReferrer(referrerId) {
+            try {
+                console.log('Setting referrer for user:', currentUser.id);
+              
+                // Update current user's referrer_id only
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ referrer_id: referrerId })
+                    .eq('telegram_id', currentUser.id);
+              
+                if (updateError) {
+                    console.error('Error updating referrer_id:', updateError);
+                    throw updateError;
+                }
+              
+                // Increment referrer's referral_count
+                const { error: countError } = await supabase.rpc('increment_referral_count', {
+                    user_telegram_id: referrerId
+                });
+              
+                if (countError) {
+                    console.error('Error incrementing referral count:', countError);
+                }
+              
+                console.log('Referrer set successfully. Awaiting ad watch qualification.');
+                showMessage('Welcome! Watch your first ad to qualify your referrer for rewards!', 'success');
+              
+                // Reload stats
+                await loadUserStats();
+            } catch (error) {
+                console.error('Error setting referrer:', error);
+                showMessage('Error processing referral', 'error');
+            }
+        }
+        // ==========================================
+        // COUNT QUALIFIED REFERRALS (OPTIMIZED)
+        // ==========================================
+        async function countQualifiedReferrals(userId) {
+            try {
+                // Check cache first
+                if (qualifiedReferralsCache[userId] !== undefined) {
+                    return qualifiedReferralsCache[userId];
+                }
+              
+                // Use optimized query with join
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('telegram_id')
+                    .eq('referrer_id', userId);
+              
+                if (error) throw error;
+              
+                if (!data || data.length === 0) {
+                    qualifiedReferralsCache[userId] = 0;
+                    return 0;
+                }
+              
+                // Get qualified referrals (users who watched at least 1 ad)
+                const referralIds = data.map(r => r.telegram_id);
+              
+                const { data: qualifiedData, error: qualifiedError } = await supabase
+                    .from('user_ads')
+                    .select('user_id')
+                    .in('user_id', referralIds);
+              
+                if (qualifiedError) throw qualifiedError;
+              
+                // Count unique qualified users
+                const uniqueQualified = new Set(qualifiedData?.map(ad => ad.user_id) || []);
+                const qualifiedCount = uniqueQualified.size;
+              
+                // Cache the result
+                qualifiedReferralsCache[userId] = qualifiedCount;
+              
+                return qualifiedCount;
+            } catch (error) {
+                console.error('Error counting qualified referrals:', error);
+                return 0;
+            }
+        }
+        // ==========================================
+        // GET CLAIMED MILESTONES
+        // ==========================================
+        async function getClaimedMilestones(userId) {
+            try {
+                // Check cache first
+                if (claimedMilestonesCache[userId] !== undefined) {
+                    return claimedMilestonesCache[userId];
+                }
+                const { data, error } = await supabase
+                    .from('milestone_claims')
+                    .select('milestone_target')
+                    .eq('user_id', userId);
+                if (error) throw error;
+                const claimedTargets = data ? data.map(claim => claim.milestone_target) : [];
+               
+                // Cache the result
+                claimedMilestonesCache[userId] = claimedTargets;
+               
+                return claimedTargets;
+            } catch (error) {
+                console.error('Error fetching claimed milestones:', error);
+                return [];
+            }
+        }
+        // ==========================================
+        // CLAIM MILESTONE REWARD
+        // ==========================================
+        async function claimMilestone(milestoneTarget, pexReward, usdtReward) {
+            try {
+                if (!currentUser) {
+                    showMessage('User not initialized', 'error');
+                    return false;
+                }
+                // Get user's database ID
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('id, balance')
+                    .eq('telegram_id', currentUser.id)
+                    .single();
+                if (userError) throw userError;
+                // Check if already claimed
+                const { data: existingClaim, error: claimCheckError } = await supabase
+                    .from('milestone_claims')
+                    .select('id')
+                    .eq('user_id', userData.id)
+                    .eq('milestone_target', milestoneTarget)
+                    .single();
+                if (existingClaim) {
+                    showMessage('This milestone has already been claimed!', 'error');
+                    return false;
+                }
+                // Insert milestone claim record
+                const { error: insertError } = await supabase
+                    .from('milestone_claims')
+                    .insert([{
+                        user_id: userData.id,
+                        milestone_target: milestoneTarget,
+                        pex_reward: pexReward,
+                        usdt_reward: usdtReward
+                    }]);
+                if (insertError) throw insertError;
+                // Update user balance (add PEX reward)
+                const newBalance = parseFloat(userData.balance) + parseFloat(pexReward);
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({
+                        balance: newBalance,
+                        total_earned: supabase.sql`total_earned + ${pexReward}`
+                    })
+                    .eq('id', userData.id);
+                if (updateError) throw updateError;
+                // Clear cache
+                claimedMilestonesCache[currentUser.id] = undefined;
+                showMessage(`🎉 Milestone claimed! You earned ${pexReward} PEX and $${usdtReward} USDT!`, 'success');
+               
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                // Reload milestones and stats
+                await loadMilestones();
+                await loadUserStats();
+                return true;
+            } catch (error) {
+                console.error('Error claiming milestone:', error);
+                showMessage('Failed to claim milestone. Please try again.', 'error');
+                return false;
+            }
+        }
+        // ==========================================
+        // LOAD USER STATS
+        // ==========================================
+        async function loadUserStats() {
+            try {
+                if (!currentUser) return;
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('referral_count')
+                    .eq('telegram_id', currentUser.id)
+                    .single();
+                if (error) throw error;
+                const totalReferrals = data?.referral_count || 0;
+                const qualifiedCount = await countQualifiedReferrals(currentUser.id);
+                // Update stats display
+                document.getElementById('referralCount').textContent = totalReferrals;
+                document.getElementById('qualifiedCount').textContent = qualifiedCount;
+                document.getElementById('qualifiedCountMilestone').textContent = qualifiedCount;
+                // Calculate milestone earnings
+                const claimedMilestones = await getClaimedMilestones(currentUser.id);
+                let totalMilestoneEarnings = 0;
+                claimedMilestones.forEach(target => {
+                    const milestone = MILESTONES.find(m => m.target === target);
+                    if (milestone) {
+                        totalMilestoneEarnings += milestone.pex;
+                    }
+                });
+                document.getElementById('milestoneEarnings').textContent = totalMilestoneEarnings;
+                console.log('User stats loaded:', { totalReferrals, qualifiedCount, milestoneEarnings: totalMilestoneEarnings });
+            } catch (error) {
+                console.error('Error loading user stats:', error);
+            }
+        }
+        // ==========================================
+        // LOAD REFERRED USERS
+        // ==========================================
+        async function loadReferredUsers() {
+            try {
+                if (!currentUser) return;
+                const container = document.getElementById('referredUsersContainer');
+                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading referrals...</p></div>';
+                // Get all referrals
+                const { data: referrals, error } = await supabase
+                    .from('users')
+                    .select('telegram_id, first_name, last_name, username, created_at')
+                    .eq('referrer_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                if (!referrals || referrals.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-user-friends"></i>
+                            <h3>No Referrals Yet</h3>
+                            <p>Share your invite link to start earning!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                // Get qualified status for each referral
+                const referralIds = referrals.map(r => r.telegram_id);
+                const { data: adsData, error: adsError } = await supabase
+                    .from('user_ads')
+                    .select('user_id')
+                    .in('user_id', referralIds);
+                if (adsError) throw adsError;
+                const qualifiedUserIds = new Set(adsData?.map(ad => ad.user_id) || []);
+                // Build referrals HTML
+                let html = '';
+                referrals.forEach(referral => {
+                    const isQualified = qualifiedUserIds.has(referral.telegram_id);
+                    const displayName = referral.first_name + (referral.last_name ? ' ' + referral.last_name : '');
+                    const joinDate = new Date(referral.created_at).toLocaleDateString();
+                    const statusClass = isQualified ? 'qualified' : 'pending';
+                    const statusIcon = isQualified ? 'fa-check-circle' : 'fa-clock';
+                    const statusText = isQualified ? 'Qualified' : 'Pending';
+                    const statusColor = isQualified ? '#00ff96' : '#ffc107';
+                    html += `
+                        <div class="user-item ${statusClass}">
+                            <div class="user-avatar">
+                                ${displayName.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="user-info">
+                                <div class="user-name">${displayName}</div>
+                                <div class="user-details">
+                                    ${referral.username ? `@${referral.username}` : 'No username'} • Joined ${joinDate}
+                                </div>
+                            </div>
+                            <div class="user-status" style="color: ${statusColor}">
+                                <i class="fas ${statusIcon}"></i> ${statusText}
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading referred users:', error);
+                document.getElementById('referredUsersContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error Loading Referrals</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+        // ==========================================
+        // LOAD LEADERBOARD
+        // ==========================================
+        async function loadLeaderboard() {
+            try {
+                const container = document.getElementById('leaderboardContainer');
+                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading leaderboard...</p></div>';
+                // Get all users with their qualified referral counts
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select('telegram_id, first_name, last_name, username, referral_count')
+                    .order('referral_count', { ascending: false })
+                    .limit(100);
+                if (error) throw error;
+                if (!users || users.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-trophy"></i>
+                            <h3>No Data Yet</h3>
+                            <p>Be the first to invite friends!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                // Calculate qualified referrals for top users
+                const usersWithQualified = await Promise.all(
+                    users.map(async (user) => {
+                        const qualifiedCount = await countQualifiedReferrals(user.telegram_id);
+                        return { ...user, qualified_count: qualifiedCount };
+                    })
+                );
+                // Sort by qualified referrals
+                usersWithQualified.sort((a, b) => b.qualified_count - a.qualified_count);
+                // Display current user milestone if in invite tab
+                if (currentUser) {
+                    const currentUserData = usersWithQualified.find(u => u.telegram_id === currentUser.id);
+                    if (currentUserData && currentUserData.qualified_count > 0) {
+                        displayCurrentMilestone(currentUserData.qualified_count);
+                    }
+                }
+                // Build leaderboard HTML
+                let html = '';
+                usersWithQualified.forEach((user, index) => {
+                    const rank = index + 1;
+                    const displayName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+                    const isCurrentUser = currentUser && user.telegram_id === currentUser.id;
+                    const rankClass = rank <= 3 ? `rank-${rank}` : '';
+                    const currentUserClass = isCurrentUser ? 'current-user' : '';
+                    let rankDisplay = rank;
+                    if (rank === 1) rankDisplay = '🥇';
+                    else if (rank === 2) rankDisplay = '🥈';
+                    else if (rank === 3) rankDisplay = '🥉';
+                    html += `
+                        <div class="leaderboard-item ${rankClass} ${currentUserClass}">
+                            <div class="leaderboard-rank">${rankDisplay}</div>
+                            <div class="user-avatar small">
+                                ${displayName.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="leaderboard-info">
+                                <div class="user-name">${displayName}</div>
+                                <div class="user-stats">
+                                    <span><i class="fas fa-users"></i> ${user.referral_count} total</span>
+                                    <span><i class="fas fa-user-check"></i> ${user.qualified_count} qualified</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                document.getElementById('leaderboardContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error Loading Leaderboard</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+        // ==========================================
+        // DISPLAY CURRENT MILESTONE
+        // ==========================================
+        function displayCurrentMilestone(qualifiedCount) {
+            const container = document.getElementById('currentMilestoneDisplay');
+           
+            // Find current milestone
+            let currentMilestone = null;
+            let progress = 0;
+           
+            for (let i = 0; i < MILESTONES.length; i++) {
+                if (qualifiedCount < MILESTONES[i].target) {
+                    currentMilestone = MILESTONES[i];
+                    progress = (qualifiedCount / currentMilestone.target) * 100;
+                    break;
+                }
+            }
+            // If all milestones completed
+            if (!currentMilestone) {
+                currentMilestone = MILESTONES[MILESTONES.length - 1];
+                progress = 100;
+            }
+            const remaining = Math.max(0, currentMilestone.target - qualifiedCount);
+            container.innerHTML = `
+                <div class="milestone-card ${progress === 100 ? 'completed' : ''}">
+                    <div class="milestone-icon">${progress === 100 ? '🏆' : '🎯'}</div>
+                    <h3>${progress === 100 ? 'Milestone Completed!' : 'Next Milestone'}</h3>
+                    <p>${currentMilestone.target} Qualified Referrals</p>
+                    <div class="milestone-progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <div class="progress-text">${qualifiedCount} / ${currentMilestone.target}</div>
+                    </div>
+                    ${progress < 100 ? `<p style="margin-top: 10px; color: var(--text-secondary);">${remaining} more qualified referrals needed</p>` : ''}
+                    <div class="milestone-reward">
+                        <div><i class="fas fa-coins"></i> ${currentMilestone.pex} PEX</div>
+                        <div><i class="fas fa-dollar-sign"></i> ${currentMilestone.usdt} USDT</div>
+                    </div>
+                </div>
+            `;
+        }
+        // ==========================================
+        // LOAD MILESTONES
+        // ==========================================
+        async function loadMilestones() {
+            try {
+                if (!currentUser) return;
+                const container = document.getElementById('milestonesContainer');
+                container.innerHTML = '<div class="loading"><i class="fas fa-spinner"></i><p>Loading milestones...</p></div>';
+                const qualifiedCount = await countQualifiedReferrals(currentUser.id);
+                const claimedMilestones = await getClaimedMilestones(currentUser.id);
+                let html = '<div class="milestone-list">';
+                MILESTONES.forEach((milestone, index) => {
+                    const isCompleted = qualifiedCount >= milestone.target;
+                    const isClaimed = claimedMilestones.includes(milestone.target);
+                    const isCurrent = !isCompleted && (index === 0 || qualifiedCount >= MILESTONES[index - 1].target);
+                    const isLocked = !isCompleted && !isCurrent;
+                    let statusClass = '';
+                    let statusIcon = '';
+                    let statusText = '';
+                    let actionButton = '';
+                    if (isClaimed) {
+                        statusClass = 'completed';
+                        statusIcon = '✅';
+                        statusText = 'Claimed';
+                    } else if (isCompleted) {
+                        statusClass = 'completed';
+                        statusIcon = '🎁';
+                        statusText = 'Ready to Claim!';
+                        actionButton = `<button class="btn btn-primary" onclick="claimMilestone(${milestone.target}, ${milestone.pex}, ${milestone.usdt})" style="margin-top: 15px; width: 100%;"><i class="fas fa-gift"></i> Claim Reward</button>`;
+                    } else if (isCurrent) {
+                        statusClass = 'current';
+                        statusIcon = '🎯';
+                        const remaining = milestone.target - qualifiedCount;
+                        statusText = `${remaining} more qualified referrals needed`;
+                    } else {
+                        statusClass = 'locked';
+                        statusIcon = '🔒';
+                        statusText = 'Locked';
+                    }
+                    const progress = Math.min(100, (qualifiedCount / milestone.target) * 100);
+                    html += `
+                        <div class="milestone-item ${statusClass}">
+                            <div class="milestone-icon-small">${statusIcon}</div>
+                            <div style="flex: 1;">
+                                <div class="milestone-title">
+                                    <h3>${milestone.target} Qualified Referrals</h3>
+                                    <p style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">${statusText}</p>
+                                </div>
+                                <div class="milestone-rewards">
+                                    <div class="reward-item">
+                                        <i class="fas fa-coins"></i>
+                                        <span>${milestone.pex} PEX</span>
+                                    </div>
+                                    <div class="reward-item">
+                                        <i class="fas fa-dollar-sign"></i>
+                                        <span>${milestone.usdt} USDT</span>
+                                    </div>
+                                </div>
+                                ${!isLocked ? `
+                                    <div class="milestone-progress-container" style="margin-top: 10px;">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: ${progress}%"></div>
+                                        </div>
+                                        <div class="progress-text">${qualifiedCount} / ${milestone.target}</div>
+                                    </div>
+                                ` : ''}
+                                ${actionButton}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading milestones:', error);
+                document.getElementById('milestonesContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Error Loading Milestones</h3>
+                        <p>Please try again later</p>
+                    </div>
+                `;
+            }
+        }
+        // ==========================================
+        // SHOW MESSAGE
+        // ==========================================
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            const messageEl = document.createElement('div');
+            messageEl.className = `message message-${type}`;
+           
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+            else if (type === 'error') icon = 'fa-exclamation-circle';
+            else if (type === 'warning') icon = 'fa-exclamation-triangle';
+           
+            messageEl.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span>${message}</span>
+            `;
+           
+            container.appendChild(messageEl);
+           
+            setTimeout(() => {
+                messageEl.style.animation = 'slideOut 0.3s ease-out forwards';
+                setTimeout(() => messageEl.remove(), 300);
+            }, 5000);
+        }
+        // ==========================================
+        // PERIODIC UPDATES
+        // ==========================================
+        setInterval(async () => {
+            if (currentTab === 'invite') {
+                await loadUserStats();
+                await loadReferredUsers();
+            } else if (currentTab === 'leaderboard') {
+                await loadLeaderboard();
+            } else if (currentTab === 'milestones') {
+                await loadMilestones();
+            }
+        }, 30000); // Update every 30 seconds
+    </script>
 </body>
 </html>
 
