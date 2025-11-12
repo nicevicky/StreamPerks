@@ -1,25 +1,3 @@
-just tell me where and what to update that won't spoil my code or my CSS, using my user table you can see that the the user table has photo URL so whenever I'm going to this page it's having issue it's not showing the user photo it's not displaying the user photo from the photo URL and I don't know why the user photo URL is already in my database which is my super base but it's not fetching it from there and I don't know why
-
-CREATE TABLE users (
-    id BIGSERIAL PRIMARY KEY,
-    telegram_id BIGINT UNIQUE NOT NULL,
-    username VARCHAR(255),
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-    photo_url TEXT,
-    balance DECIMAL(20, 8) DEFAULT 0,
-    role VARCHAR(50) DEFAULT 'user', -- 'user' or 'admin'
-    verified BOOLEAN DEFAULT FALSE,
-    banned BOOLEAN DEFAULT FALSE,
-    referrer_id BIGINT,
-    total_earned DECIMAL(20, 8) DEFAULT 0,
-    total_withdrawn DECIMAL(20, 8) DEFAULT 0,
-    referral_count INT DEFAULT 0,
-    last_daily_bonus TIMESTAMP, -- Track last daily bonus claim
-    daily_streak INT DEFAULT 0, -- Track consecutive days
-    created_at TIMESTAMP DEFAULT NOW(),
-    last_active TIMESTAMP DEFAULT NOW()
-);
 
 
 
@@ -1863,11 +1841,9 @@ async function loadReferredUsers() {
             const statusText = isQualified ? 'Qualified' : 'Pending';
             const statusColor = isQualified ? '#00ff96' : '#ffc107';
             // Conditionally set avatar content (USE photo_url IF AVAILABLE)
-            // Use Telegram avatar API or fallback to initials
-const avatarContent = referral.username 
-    ? `<img src="https://t.me/i/userpic/320/${referral.username}.jpg" alt="${displayName}" onerror="this.style.display='none'; this.parentElement.textContent='${displayName.charAt(0).toUpperCase()}';">` 
-    : displayName.charAt(0).toUpperCase();
-
+            const avatarContent = referral.photo_url 
+                ? `<img src="${referral.photo_url}" alt="${displayName}">` 
+                : displayName.charAt(0).toUpperCase();
             html += `
                 <div class="user-item ${statusClass}">
                     <div class="user-avatar">
@@ -1909,7 +1885,7 @@ async function loadLeaderboard() {
             .from('users')
             .select('telegram_id, first_name, last_name, username, referral_count, photo_url')  // <-- Added photo_url
             .order('referral_count', { ascending: false })
-            .limit(100);
+            .limit(20);
         if (error) throw error;
         if (!users || users.length === 0) {
             container.innerHTML = `
@@ -1950,11 +1926,9 @@ async function loadLeaderboard() {
             else if (rank === 2) rankDisplay = '🥈';
             else if (rank === 3) rankDisplay = '🥉';
             // Conditionally set avatar content (USE photo_url IF AVAILABLE)
-            // Use Telegram avatar API or fallback to initials
-const avatarContent = referral.username 
-    ? `<img src="https://t.me/i/userpic/320/${referral.username}.jpg" alt="${displayName}" onerror="this.style.display='none'; this.parentElement.textContent='${displayName.charAt(0).toUpperCase()}';">` 
-    : displayName.charAt(0).toUpperCase();
-
+            const avatarContent = user.photo_url 
+                ? `<img src="${user.photo_url}" alt="${displayName}">` 
+                : displayName.charAt(0).toUpperCase();
             html += `
                 <div class="leaderboard-item ${rankClass} ${currentUserClass}">
                     <div class="leaderboard-rank">${rankDisplay}</div>
