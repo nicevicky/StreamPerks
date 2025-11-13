@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -134,30 +133,6 @@
             font-weight: 700;
             font-size: 20px;
             margin: 0 5px;
-        }
-
-        /* Streak Display */
-        .streak-display {
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(249, 115, 22, 0.1));
-            border: 1px solid var(--orange);
-            border-radius: 12px;
-            padding: 10px 15px;
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-        }
-
-        .streak-display i {
-            color: var(--orange);
-            font-size: 20px;
-        }
-
-        .streak-display .streak-number {
-            color: var(--orange);
-            font-weight: 700;
-            font-size: 18px;
         }
         
         #messageContainer {
@@ -633,12 +608,6 @@
                 <span class="currency" id="userBalance">0.00000000</span>
                 <span>Perks</span>
             </div>
-            <div class="streak-display" id="streakDisplay" style="display: none;">
-                <i class="fa-solid fa-fire"></i>
-                <span>Streak:</span>
-                <span class="streak-number" id="streakNumber">0</span>
-                <span>days</span>
-            </div>
         </div>
         
         <div id="messageContainer"></div>
@@ -760,8 +729,8 @@
             scene.add(particlesMesh);
             
             const geometry = new THREE.TorusKnotGeometry(0.8, 0.3, 100, 16);
-            const material = new THREE.MeshBasicMaterial({ 
-                color: 0x00f2ff, 
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x00f2ff,
                 wireframe: true,
                 transparent: true,
                 opacity: 0.3
@@ -827,17 +796,11 @@
         }
         
         function updateBalanceDisplay() {
-    if (currentUser) {
-        const balance = parseFloat(currentUser.balance || 0);
-        document.getElementById('userBalance').textContent = balance.toFixed(8);
-        
-        if (currentUser.daily_streak > 0) {
-            document.getElementById('streakDisplay').style.display = 'flex';
-            document.getElementById('streakNumber').textContent = currentUser.daily_streak;
+            if (currentUser) {
+                const balance = parseFloat(currentUser.balance || 0);
+                document.getElementById('userBalance').textContent = balance.toFixed(8);
+            }
         }
-    }
-}
-
         
         // ============================================
         // DATABASE FUNCTIONS WITH ERROR HANDLING
@@ -868,8 +831,6 @@
                 console.error('Error fetching settings:', err);
                 return {
                     daily_bonus: 1.00,
-                    streak_bonus_multiplier: 0.10,
-                    max_streak_bonus: 5.00,
                     referral_bonus: 5.00,
                     min_withdrawal: 10.00
                 };
@@ -1006,7 +967,7 @@
                 
                 const { error: balanceError } = await supabase
                     .from('users')
-                    .update({ 
+                    .update({
                         balance: newBalance,
                         total_earned: newTotalEarned
                     })
@@ -1031,20 +992,9 @@
             }
         }
         
-        function calculateDailyBonus(streakDays) {
-    const baseBonus = parseFloat(appSettings.daily_bonus || 1.00);
-    const multiplier = parseFloat(appSettings.streak_bonus_multiplier || 0.10);
-    const maxBonus = parseFloat(appSettings.max_streak_bonus || 5.00);
-    
-    const bonus = baseBonus + ((streakDays || 0) * multiplier);
-    return Math.min(bonus, maxBonus);
-}
-
-
-        
         function canClaimDailyBonus() {
             if (!currentUser.last_daily_bonus) {
-                return { canClaim: true, streak: 0, bonus: calculateDailyBonus(0) };
+                return { canClaim: true, bonus: parseFloat(appSettings.daily_bonus || 1.00) };
             }
             
             const lastClaim = new Date(currentUser.last_daily_bonus);
@@ -1056,12 +1006,9 @@
             const daysDiff = Math.floor((today - lastClaimDay) / (1000 * 60 * 60 * 24));
             
             if (daysDiff === 0) {
-                return { canClaim: false, streak: currentUser.daily_streak, nextClaim: lastClaim };
-            } else if (daysDiff === 1) {
-                const newStreak = currentUser.daily_streak + 1;
-                return { canClaim: true, streak: newStreak, bonus: calculateDailyBonus(newStreak) };
+                return { canClaim: false, bonus: parseFloat(appSettings.daily_bonus || 1.00), nextClaim: lastClaim };
             } else {
-                return { canClaim: true, streak: 0, bonus: calculateDailyBonus(0) };
+                return { canClaim: true, bonus: parseFloat(appSettings.daily_bonus || 1.00) };
             }
         }
         
@@ -1078,15 +1025,13 @@
                 const newBalance = parseFloat(currentUser.balance) + reward;
                 const newTotalEarned = parseFloat(currentUser.total_earned || 0) + reward;
                 const newLastBonus = new Date().toISOString();
-                const newStreak = bonusInfo.streak;
                 
                 const { error: updateError } = await supabase
                     .from('users')
                     .update({
                         balance: newBalance,
                         total_earned: newTotalEarned,
-                        last_daily_bonus: newLastBonus,
-                        daily_streak: newStreak
+                        last_daily_bonus: newLastBonus
                     })
                     .eq('telegram_id', telegramId);
                 
@@ -1096,20 +1041,18 @@
                     user_id: telegramId,
                     type: 'daily_bonus',
                     amount: reward,
-                    description: `Daily bonus (${newStreak} day streak)`
+                    description: 'Daily bonus'
                 });
                 
                 currentUser.balance = newBalance;
                 currentUser.total_earned = newTotalEarned;
                 currentUser.last_daily_bonus = newLastBonus;
-                currentUser.daily_streak = newStreak;
                 updateBalanceDisplay();
                 
-                return { 
-                    success: true, 
-                    reward: reward, 
-                    streak: newStreak,
-                    message: `Earned ${reward.toFixed(8)} Perks! ${newStreak} day streak!`
+                return {
+                    success: true,
+                    reward: reward,
+                    message: `Earned ${reward.toFixed(8)} Perks!`
                 };
             } catch (err) {
                 console.error('Error claiming daily bonus:', err);
@@ -1146,7 +1089,7 @@
                 
                 const { error: balanceError } = await supabase
                     .from('users')
-                    .update({ 
+                    .update({
                         balance: newBalance,
                         total_earned: newTotalEarned
                     })
@@ -1174,7 +1117,7 @@
         }
         
         // ============================================
-        // AD SDK INTEGRATION
+        // AD SDK INTEGRATION WITH LOADING STATE
         // ============================================
         
         function loadAdSDK(zoneId, sdkName) {
@@ -1190,8 +1133,19 @@
                 script.setAttribute('data-sdk', sdkName);
                 script.async = true;
                 
-                script.onload = () => resolve();
-                script.onerror = () => reject(new Error('Failed to load ad SDK'));
+                const timeout = setTimeout(() => {
+                    reject(new Error('Ad SDK loading timeout'));
+                }, 10000);
+                
+                script.onload = () => {
+                    clearTimeout(timeout);
+                    setTimeout(() => resolve(), 500);
+                };
+                
+                script.onerror = () => {
+                    clearTimeout(timeout);
+                    reject(new Error('Failed to load ad SDK'));
+                };
                 
                 document.head.appendChild(script);
             });
@@ -1280,7 +1234,7 @@
         }
         
         // ============================================
-        // RENDERING FUNCTIONS (FIXED)
+        // RENDERING FUNCTIONS - ALTERNATING ADS AND TASKS
         // ============================================
         
         function renderDailyBonusCard() {
@@ -1290,8 +1244,7 @@
             let description = '';
             
             if (bonusInfo.canClaim) {
-                const streakText = bonusInfo.streak > 0 ? ` (${bonusInfo.streak} day streak bonus!)` : '';
-                description = `Check in daily to earn rewards!${streakText}`;
+                description = 'Check in daily to earn rewards!';
                 buttonHtml = `
                     <button class="btn-task btn-claim" onclick="handleClaimBonus(this)">
                         <i class="fa-solid fa-gift"></i> Claim
@@ -1306,7 +1259,7 @@
                 const hoursRemaining = Math.floor((tomorrow - new Date()) / (1000 * 60 * 60));
                 const minutesRemaining = Math.floor(((tomorrow - new Date()) / (1000 * 60)) % 60);
                 
-                description = `Come back in ${hoursRemaining}h ${minutesRemaining}m. Current streak: ${bonusInfo.streak} days`;
+                description = `Come back in ${hoursRemaining}h ${minutesRemaining}m`;
                 buttonHtml = `
                     <button class="btn-task btn-claimed" disabled>
                         <i class="fa-solid fa-check"></i> Claimed
@@ -1334,43 +1287,74 @@
             `;
         }
         
-        function renderWatchAdsCards() {
-            if (activeAds.length === 0) return '';
+        function renderAdCard(ad) {
+            const reward = parseFloat(ad.reward || 0).toFixed(8);
+            const description = ad.description || 'Watch an ad to earn rewards!';
+            const zoneId = (ad.zone_id || '').replace(/'/g, "\\'");
+            const sdkName = (ad.sdk_name || '').replace(/'/g, "\\'");
             
-            return activeAds.map(ad => {
-                const reward = parseFloat(ad.reward || 0).toFixed(8);
-                const description = ad.description || 'Watch an ad to earn rewards!';
-                const zoneId = (ad.zone_id || '').replace(/'/g, "\\'");
-                const sdkName = (ad.sdk_name || '').replace(/'/g, "\\'");
-                
-                return `
-                <div class="task-card watch-ads" data-ad-id="${ad.id}">
-                    <div class="task-icon">
-                        <i class="fa-solid fa-video"></i>
-                    </div>
-                    <div class="task-info">
-                        <h3 class="task-title">Watch Ads & Earn</h3>
-                        <p class="task-description">${description}</p>
-                        <div class="task-reward">
-                            <i class="fa-solid fa-coins"></i>
-                            <span>+${reward} Perks</span>
-                        </div>
-                    </div>
-                    <div class="task-action">
-                        <button class="btn-task btn-watch-ad" onclick="handleWatchAd(${ad.id}, '${zoneId}', '${sdkName}', ${ad.reward}, this)">
-                            <i class="fa-solid fa-play"></i> Watch
-                        </button>
+            return `
+            <div class="task-card watch-ads" data-ad-id="${ad.id}">
+                <div class="task-icon">
+                    <i class="fa-solid fa-video"></i>
+                </div>
+                <div class="task-info">
+                    <h3 class="task-title">Watch Ads & Earn</h3>
+                    <p class="task-description">${description}</p>
+                    <div class="task-reward">
+                        <i class="fa-solid fa-coins"></i>
+                        <span>+${reward} Perks</span>
                     </div>
                 </div>
-                `;
-            }).join('');
+                <div class="task-action">
+                    <button class="btn-task btn-watch-ad" onclick="handleWatchAd(${ad.id}, '${zoneId}', '${sdkName}', ${ad.reward}, this)">
+                        <i class="fa-solid fa-play"></i> Watch
+                    </button>
+                </div>
+            </div>
+            `;
+        }
+        
+        function renderTaskCard(task) {
+            const isCompleted = completedTaskIds.has(task.id);
+            const cardClass = isCompleted ? 'task-card completed' : 'task-card';
+            const icon = task.icon || 'fa-tasks';
+            const taskUrl = (task.task_url || '').replace(/'/g, "\\'");
+            const taskType = (task.task_type || '').replace(/'/g, "\\'");
+            
+            return `
+            <div class="${cardClass}" data-task-id="${task.id}">
+                ${isCompleted ? '<div class="completed-badge"><i class="fa-solid fa-check"></i> Done</div>' : ''}
+                <div class="task-icon">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="task-info">
+                    <h3 class="task-title">${task.title}</h3>
+                    <p class="task-description">${task.description || 'Complete this task to earn rewards'}</p>
+                    <div class="task-reward">
+                        <i class="fa-solid fa-coins"></i>
+                        <span>+${parseFloat(task.reward || 0).toFixed(8)} Perks</span>
+                    </div>
+                </div>
+                <div class="task-action">
+                    ${isCompleted ?
+                        '<button class="btn-task btn-completed" disabled><i class="fa-solid fa-check"></i> Done</button>' :
+                        `<button class="btn-task btn-start" onclick="startTask(${task.id}, '${taskUrl}', '${taskType}', this)">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Start
+                        </button>
+                        <button class="btn-task btn-verify" onclick="verifyTask(${task.id}, '${taskUrl}', '${taskType}', ${task.reward}, this)" style="display: none;">
+                            <i class="fa-solid fa-circle-check"></i> Verify
+                        </button>`
+                    }
+                </div>
+            </div>
+            `;
         }
         
         function renderTasks() {
             const container = document.getElementById('tasksContainer');
             
             const dailyBonusCardHtml = renderDailyBonusCard();
-            const watchAdsCardsHtml = renderWatchAdsCards();
             
             if (allTasks.length === 0 && activeAds.length === 0) {
                 container.innerHTML = `
@@ -1384,47 +1368,24 @@
                 return;
             }
             
-            const tasksHTML = allTasks.map(task => {
-                const isCompleted = completedTaskIds.has(task.id);
-                const cardClass = isCompleted ? 'task-card completed' : 'task-card';
-                const icon = task.icon || 'fa-tasks';
-                const taskUrl = (task.task_url || '').replace(/'/g, "\\'");
-                const taskType = (task.task_type || '').replace(/'/g, "\\'");
-                
-                return `
-                <div class="${cardClass}" data-task-id="${task.id}">
-                    ${isCompleted ? '<div class="completed-badge"><i class="fa-solid fa-check"></i> Done</div>' : ''}
-                    <div class="task-icon">
-                        <i class="fa-solid ${icon}"></i>
-                    </div>
-                    <div class="task-info">
-                        <h3 class="task-title">${task.title}</h3>
-                        <p class="task-description">${task.description || 'Complete this task to earn rewards'}</p>
-                        <div class="task-reward">
-                            <i class="fa-solid fa-coins"></i>
-                            <span>+${parseFloat(task.reward || 0).toFixed(8)} Perks</span>
-                        </div>
-                    </div>
-                    <div class="task-action">
-                        ${isCompleted ? 
-                            '<button class="btn-task btn-completed" disabled><i class="fa-solid fa-check"></i> Done</button>' :
-                            `<button class="btn-task btn-start" onclick="startTask(${task.id}, '${taskUrl}', '${taskType}', this)">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Start
-                            </button>
-                            <button class="btn-task btn-verify" onclick="verifyTask(${task.id}, '${taskUrl}', '${taskType}', ${task.reward}, this)" style="display: none;">
-                                <i class="fa-solid fa-circle-check"></i> Verify
-                            </button>`
-                        }
-                    </div>
-                </div>
-                `;
-            }).join('');
+            let combinedHTML = '';
+            const maxLength = Math.max(activeAds.length, allTasks.length);
             
-            container.innerHTML = `<div class="tasks-grid">${dailyBonusCardHtml}${watchAdsCardsHtml}${tasksHTML}</div>`;
+            for (let i = 0; i < maxLength; i++) {
+                if (i < activeAds.length) {
+                    combinedHTML += renderAdCard(activeAds[i]);
+                }
+                
+                if (i < allTasks.length) {
+                    combinedHTML += renderTaskCard(allTasks[i]);
+                }
+            }
+            
+            container.innerHTML = `<div class="tasks-grid">${dailyBonusCardHtml}${combinedHTML}</div>`;
         }
         
         // ============================================
-        // EVENT HANDLERS (FIXED WITH PROPER BUTTON STATE MANAGEMENT)
+        // EVENT HANDLERS
         // ============================================
         
         window.handleClaimBonus = async function(button) {
@@ -1451,6 +1412,8 @@
             setButtonLoading(button, true);
             
             try {
+                showMessage('Loading ad, please wait...', 'success');
+                
                 await loadAdSDK(zoneId, sdkName);
                 
                 if (typeof window[sdkName] === 'function') {
@@ -1469,7 +1432,7 @@
                         }
                     } catch (adErr) {
                         console.error('Ad display error:', adErr);
-                        showMessage('Failed to load ad. Try again.', 'error');
+                        showMessage('Error loading ad. Please check your connection and try again.', 'error');
                         setButtonLoading(button, false);
                     }
                 } else {
@@ -1477,7 +1440,7 @@
                 }
             } catch (err) {
                 console.error('Error loading ad:', err);
-                showMessage('Failed to load ad. Please try again.', 'error');
+                showMessage('Failed to load ad. Please check your connection and try again.', 'error');
                 setButtonLoading(button, false);
             }
         }
@@ -1571,7 +1534,7 @@
         };
         
         // ============================================
-        // INITIALIZATION WITH TIMEOUT AND ERROR HANDLING
+        // INITIALIZATION
         // ============================================
         
         async function init() {
@@ -1634,3 +1597,4 @@
     </script>
     </body>
 </html>
+
