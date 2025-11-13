@@ -504,8 +504,9 @@
         tg.expand();
         tg.ready();
 
-        // Initialize Supabase
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialize Supabase (FIXED - using window.supabase)
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Get current user
         const user = tg.initDataUnsafe?.user;
@@ -533,33 +534,60 @@
             }, 5000);
         }
 
-        // MarkdownV2 escape function (fixes $ and other special chars)
+        // MarkdownV2 escape function
         function escapeMarkdownV2(text) {
-            return text.replace(/([_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!])/g, '\\$1');
+            return text.replace(/([_\*
+$$
+
+$$
+$$$$\~\`\>\#\+\-\=\|\{\}\.\!\\])/g, '\\$1');
         }
 
-        // ===== CHECK ADMIN STATUS =====
+        // ===== CHECK ADMIN STATUS FROM USERS TABLE =====
         async function checkAdmin() {
             if (!currentUserId) {
-                showAlert('Error: User not authenticated', 'error');
+                showAlert('Error: User not authenticated via Telegram', 'error');
                 setTimeout(() => window.location.href = 'admin.html', 2000);
                 return false;
             }
+
             try {
-                const { data, error } = await supabase
+                // Query users table to check role
+                const { data, error } = await supabaseClient
                     .from('users')
-                    .select('role')
+                    .select('role, banned')
                     .eq('telegram_id', currentUserId)
                     .single();
-                if (error) throw error;
-                if (data?.role !== 'admin') {
-                    showAlert('Access denied: Admin only', 'error');
+
+                if (error) {
+                    console.error('Supabase error:', error);
+                    throw new Error(`Database query failed: ${error.message}`);
+                }
+
+                if (!data) {
+                    showAlert('User not found in database', 'error');
                     setTimeout(() => window.location.href = 'admin.html', 2000);
                     return false;
                 }
+
+                // Check if user is banned
+                if (data.banned) {
+                    showAlert('Your account is banned', 'error');
+                    setTimeout(() => window.location.href = 'admin.html', 2000);
+                    return false;
+                }
+
+                // Check if user role is admin
+                if (data.role !== 'admin') {
+                    showAlert('Access denied: Admin privileges required', 'error');
+                    setTimeout(() => window.location.href = 'admin.html', 2000);
+                    return false;
+                }
+
                 return true;
             } catch (error) {
-                showAlert(`Error checking admin: ${error.message}`, 'error');
+                console.error('Admin check error:', error);
+                showAlert(`Error checking admin status: ${error.message}`, 'error');
                 return false;
             }
         }
@@ -571,14 +599,16 @@
             sendBtn.innerHTML = '<span class="spinner-inline"></span> Sending...';
 
             try {
-                // 1. Get all users
-                const { data: users, error: usersError } = await supabase
+                // 1. Get all non-banned users from users table
+                const { data: users, error: usersError } = await supabaseClient
                     .from('users')
                     .select('telegram_id')
                     .eq('banned', false);
+
                 if (usersError) throw new Error(`Database error: ${usersError.message}`);
+                
                 if (!users || users.length === 0) {
-                    throw new Error('No users found in database');
+                    throw new Error('No active users found in database');
                 }
 
                 // 2. Prepare message with button
@@ -591,11 +621,11 @@
                     };
                 }
 
-                // 3. Send to all users (with MarkdownV2 + proper escaping)
+                // 3. Send to all users
                 let successCount = 0;
                 let failCount = 0;
 
-                const escapedMessage = escapeMarkdownV2(messageText); // Critical fix
+                const escapedMessage = escapeMarkdownV2(messageText);
 
                 for (const userItem of users) {
                     try {
@@ -603,7 +633,7 @@
                         const payload = {
                             chat_id: userItem.telegram_id,
                             text: escapedMessage,
-                            parse_mode: 'MarkdownV2',  // Changed to MarkdownV2
+                            parse_mode: 'MarkdownV2',
                             ...(keyboard && { reply_markup: keyboard })
                         };
 
@@ -627,7 +657,7 @@
                 }
 
                 // 4. Save to messages table
-                const { error: saveError } = await supabase
+                const { error: saveError } = await supabaseClient
                     .from('messages')
                     .insert({
                         admin_id: currentUserId,
@@ -636,13 +666,14 @@
                         button_url: buttonUrl || null,
                         sent_count: successCount
                     });
+
                 if (saveError) {
                     console.error('Error saving to messages table:', saveError);
-                    showAlert(`Warning: Message sent but not saved to history: ${saveError.message}`, 'error');
+                    showAlert(`Warning: Messages sent but history not saved: ${saveError.message}`, 'error');
                 }
 
                 // 5. Show result
-                showAlert(`✅ Broadcast sent! Success: ${successCount}, Failed: ${failCount}`, 'success');
+                showAlert(`✅ Broadcast complete! Sent: ${successCount}, Failed: ${failCount}`, 'success');
                 
                 // Reset form
                 document.getElementById('broadcastForm').reset();
@@ -650,7 +681,7 @@
                 // Reload history
                 loadHistory();
             } catch (error) {
-                showAlert(`❌ Error: ${error.message}`, 'error');
+                showAlert(`❌ Broadcast error: ${error.message}`, 'error');
                 console.error('Broadcast error:', error);
             } finally {
                 sendBtn.disabled = false;
@@ -658,26 +689,29 @@
             }
         }
 
-        // ===== LOAD HISTORY =====
+        // ===== LOAD HISTORY FROM MESSAGES TABLE =====
         async function loadHistory() {
             const historyList = document.getElementById('historyList');
             
             try {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('messages')
                     .select('*')
                     .order('created_at', { ascending: false })
                     .limit(20);
+
                 if (error) throw error;
+
                 if (!data || data.length === 0) {
                     historyList.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-inbox"></i>
-                            <p>No broadcasts yet</p>
+                            <p>No broadcast history yet</p>
                         </div>
                     `;
                     return;
                 }
+
                 historyList.innerHTML = data.map(msg => {
                     const date = new Date(msg.created_at).toLocaleString();
                     const truncatedMsg = msg.message_text.length > 100
@@ -692,44 +726,49 @@
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
-                            ${msg.button_text ? `
-                                <a href="${msg.button_url}" target="_blank" class="history-button">
+                            ${msg.button_text && msg.button_url ? `
+                                <a href="${escapeHtml(msg.button_url)}" target="_blank" class="history-button">
                                     🔗 ${escapeHtml(msg.button_text)}
                                 </a>
                             ` : ''}
                             <div class="history-meta">
-                                <span><i class="fas fa-users"></i> ${msg.sent_count} users</span>
+                                <span><i class="fas fa-users"></i> ${msg.sent_count || 0} users</span>
                                 <span><i class="fas fa-clock"></i> ${date}</span>
                             </div>
                         </div>
                     `;
                 }).join('');
             } catch (error) {
+                console.error('History load error:', error);
                 showAlert(`Error loading history: ${error.message}`, 'error');
                 historyList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error loading history</p>
+                        <p>Error loading broadcast history</p>
                     </div>
                 `;
             }
         }
 
-        // ===== DELETE BROADCAST =====
+        // ===== DELETE BROADCAST FROM MESSAGES TABLE =====
         async function deleteBroadcast(id) {
-            if (!confirm('Are you sure you want to delete this broadcast from history?')) {
+            if (!confirm('Delete this broadcast from history?')) {
                 return;
             }
+
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('messages')
                     .delete()
                     .eq('id', id);
+
                 if (error) throw error;
-                showAlert('Broadcast deleted from history', 'success');
+
+                showAlert('Broadcast deleted successfully', 'success');
                 loadHistory();
             } catch (error) {
-                showAlert(`Error deleting: ${error.message}`, 'error');
+                console.error('Delete error:', error);
+                showAlert(`Error deleting broadcast: ${error.message}`, 'error');
             }
         }
 
@@ -743,6 +782,7 @@
         // ===== FORM SUBMIT =====
         document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
             const messageText = document.getElementById('messageText').value.trim();
             const buttonText = document.getElementById('buttonText').value.trim();
             const buttonUrl = document.getElementById('buttonUrl').value.trim();
@@ -752,22 +792,24 @@
                 showAlert('Please enter a message', 'error');
                 return;
             }
+
             if (buttonText && !buttonUrl) {
                 showAlert('Button URL is required when button text is provided', 'error');
                 return;
             }
+
             if (buttonUrl && !buttonText) {
                 showAlert('Button text is required when button URL is provided', 'error');
                 return;
             }
+
             await sendBroadcast(messageText, buttonText || null, buttonUrl || null);
         });
 
         // ===== INITIALIZE =====
         (async function init() {
             const isAdmin = await checkAdmin();
-            if (isAdmin) {
-                loadHistory();
+            if (isAdmin) {                loadHistory();
             }
         })();
 
@@ -776,3 +818,4 @@
     </script>
 </body>
 </html>
+
