@@ -15,6 +15,7 @@
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
+
         :root {
             --bg-dark: #0a0a0f;
             --glass-bg: rgba(255, 255, 255, 0.05);
@@ -27,6 +28,7 @@
             --danger-red: #ff3366;
             --success-green: #00ff88;
         }
+
         body {
             font-family: 'Poppins', sans-serif;
             background: var(--bg-dark);
@@ -35,6 +37,7 @@
             min-height: 100vh;
             padding-bottom: 90px;
         }
+
         .bg-animation {
             position: fixed;
             top: 0;
@@ -44,27 +47,31 @@
             z-index: -1;
             overflow: hidden;
         }
+
         .bg-animation::before {
             content: '';
             position: absolute;
             width: 200%;
             height: 200%;
             background: radial-gradient(circle at 20% 50%, rgba(0, 242, 255, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
-                        radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+                radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
             animation: bgFloat 20s ease-in-out infinite;
         }
+
         @keyframes bgFloat {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
             33% { transform: translate(50px, 50px) rotate(120deg); }
             66% { transform: translate(-50px, 100px) rotate(240deg); }
         }
+
         .header {
             padding: 20px 20px 10px;
             text-align: center;
             position: relative;
             z-index: 10;
         }
+
         .logo {
             font-size: 28px;
             font-weight: 800;
@@ -75,11 +82,13 @@
             text-shadow: 0 0 30px var(--neon-cyan-glow);
             letter-spacing: 1px;
         }
+
         .container {
             padding: 20px;
             max-width: 600px;
             margin: 0 auto;
         }
+
         .broadcast-card {
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
@@ -90,10 +99,12 @@
             box-shadow: var(--card-shadow);
             transition: all 0.4s ease;
         }
+
         .broadcast-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 15px 50px rgba(0, 242, 255, 0.2);
         }
+
         .section-title {
             font-size: 20px;
             font-weight: 700;
@@ -103,9 +114,11 @@
             align-items: center;
             gap: 10px;
         }
+
         .form-group {
             margin-bottom: 18px;
         }
+
         .form-label {
             display: block;
             font-size: 13px;
@@ -115,7 +128,8 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .form-input, .form-textarea {
+
+        .form-input, .form-textarea, .form-select {
             width: 100%;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--glass-border);
@@ -126,34 +140,44 @@
             font-size: 14px;
             transition: all 0.3s ease;
         }
-        .form-input:focus, .form-textarea:focus {
+        
+        .form-select {
+             /* Custom styles for select arrow */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23b4b4b4' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 12px 12px;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
             outline: none;
             border-color: var(--neon-cyan);
             box-shadow: 0 0 20px var(--neon-cyan-glow);
             background: rgba(0, 242, 255, 0.05);
         }
+
         .form-textarea {
             min-height: 120px;
             resize: vertical;
         }
+
         .markdown-hint {
             font-size: 11px;
             color: var(--text-secondary);
             margin-top: 5px;
             font-style: italic;
         }
+
         .markdown-hint code {
             background: rgba(0, 242, 255, 0.1);
             padding: 2px 6px;
             border-radius: 4px;
             color: var(--neon-cyan);
         }
-        .button-group {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
+
         .btn {
             padding: 14px 20px;
             border-radius: 12px;
@@ -168,23 +192,104 @@
             gap: 8px;
             font-family: 'Poppins', sans-serif;
         }
+
         .btn-primary {
             background: linear-gradient(135deg, var(--neon-cyan), #9333ea);
             color: white;
             box-shadow: 0 5px 20px var(--neon-cyan-glow);
+            width: 100%; /* Make send button full width */
         }
+
         .btn-primary:hover {
             transform: translateY(-3px);
             box-shadow: 0 8px 30px var(--neon-cyan-glow);
         }
+
         .btn-primary:active {
             transform: translateY(-1px);
         }
+
         .btn-primary:disabled {
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
         }
+        
+        .btn-secondary {
+            background: rgba(0, 242, 255, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(0, 242, 255, 0.2);
+            box-shadow: 0 0 15px var(--neon-cyan-glow);
+        }
+
+        .btn-danger-outline {
+            background: transparent;
+            border: 1px solid var(--danger-red);
+            color: var(--danger-red);
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        .btn-danger-outline:hover {
+            background: rgba(255, 51, 102, 0.1);
+        }
+
+        /* ----- NEW BUTTON STYLES ----- */
+        #buttonsContainer {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .button-group-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            animation: slideIn 0.4s ease;
+        }
+        
+        .button-group-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .button-group-item-header .form-label {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .button-group-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        /* Reduce font size inside button inputs */
+        .button-group-item .form-input {
+            font-size: 13px;
+            padding: 10px 12px;
+        }
+
+        @media (max-width: 480px) {
+            .button-group-inputs {
+                grid-template-columns: 1fr; /* Stack inputs on small screens */
+            }
+        }
+        /* ----- END NEW BUTTON STYLES ----- */
+
+
         .alert {
             padding: 12px 15px;
             border-radius: 12px;
@@ -195,6 +300,7 @@
             gap: 10px;
             animation: slideIn 0.4s ease;
         }
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -205,26 +311,31 @@
                 transform: translateY(0);
             }
         }
+
         .alert-success {
             background: rgba(0, 255, 136, 0.1);
             border: 1px solid var(--success-green);
             color: var(--success-green);
         }
+
         .alert-error {
             background: rgba(255, 51, 102, 0.1);
             border: 1px solid var(--danger-red);
             color: var(--danger-red);
         }
+
         .alert-info {
             background: rgba(0, 242, 255, 0.1);
             border: 1px solid var(--neon-cyan);
             color: var(--neon-cyan);
         }
+
         .history-list {
             display: flex;
             flex-direction: column;
             gap: 12px;
         }
+
         .history-item {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--glass-border);
@@ -233,31 +344,38 @@
             transition: all 0.3s ease;
             position: relative;
         }
+
         .history-item:hover {
             background: rgba(255, 255, 255, 0.05);
             border-color: var(--neon-cyan);
         }
+
         .history-header {
             display: flex;
             justify-content: space-between;
             align-items: start;
             margin-bottom: 10px;
         }
+
         .history-message {
             flex: 1;
             font-size: 14px;
             line-height: 1.5;
             color: var(--text-primary);
             word-break: break-word;
+            white-space: pre-wrap; /* Preserve newlines */
         }
+
         .history-meta {
             font-size: 11px;
             color: var(--text-secondary);
             margin-top: 8px;
             display: flex;
+            flex-wrap: wrap;
             gap: 15px;
             align-items: center;
         }
+
         .history-button {
             display: inline-block;
             background: rgba(0, 242, 255, 0.1);
@@ -269,6 +387,14 @@
             margin-top: 8px;
             text-decoration: none;
         }
+        
+        .history-button-wrapper {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
         .delete-btn {
             background: rgba(255, 51, 102, 0.1);
             border: 1px solid var(--danger-red);
@@ -278,11 +404,14 @@
             font-size: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-left: 10px; /* Add space */
         }
+
         .delete-btn:hover {
             background: rgba(255, 51, 102, 0.2);
             transform: scale(1.05);
         }
+
         .spinner-inline {
             display: inline-block;
             width: 14px;
@@ -292,9 +421,11 @@
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
+
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -310,6 +441,7 @@
             z-index: 1000;
             box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
         }
+
         .nav-btn {
             flex: 1;
             display: flex;
@@ -328,6 +460,7 @@
             position: relative;
             overflow: hidden;
         }
+
         .nav-btn::before {
             content: '';
             position: absolute;
@@ -340,14 +473,17 @@
             transform: translate(-50%, -50%);
             transition: width 0.6s, height 0.6s;
         }
+
         .nav-btn:active::before {
             width: 200px;
             height: 200px;
         }
+
         .nav-btn:hover {
             transform: translateY(-8px) scale(1.05);
             box-shadow: 0 8px 25px var(--neon-cyan-glow);
         }
+
         .nav-btn.active {
             background: rgba(0, 242, 255, 0.15);
             border-color: var(--neon-cyan);
@@ -355,19 +491,23 @@
             box-shadow: 0 0 25px var(--neon-cyan-glow), inset 0 0 20px rgba(0, 242, 255, 0.1);
             transform: translateY(-5px);
         }
+
         .nav-icon {
             font-size: 22px;
             position: relative;
             z-index: 2;
             transition: all 0.3s ease;
         }
+
         .nav-btn.active .nav-icon {
             animation: iconBounce 0.6s ease;
         }
+
         @keyframes iconBounce {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.2); }
         }
+
         .nav-label {
             font-size: 11px;
             font-weight: 600;
@@ -376,16 +516,19 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+
         .empty-state {
             text-align: center;
             padding: 40px 20px;
             color: var(--text-secondary);
         }
+
         .empty-state i {
             font-size: 48px;
             margin-bottom: 15px;
             opacity: 0.5;
         }
+
         @media (max-width: 380px) {
             .nav-btn { padding: 10px 5px; margin: 0 3px; }
             .nav-icon { font-size: 20px; }
@@ -394,8 +537,8 @@
     </style>
 </head>
 <body>
-    <div class="bg-animation"></div>
 
+    <div class="bg-animation"></div>
     <div class="header">
         <div class="logo"><i class="fas fa-bullhorn"></i> Broadcast</div>
     </div>
@@ -403,58 +546,50 @@
     <div class="container">
         <div id="alertContainer"></div>
 
-        <!-- Broadcast Form -->
         <div class="broadcast-card">
             <div class="section-title">
                 <i class="fas fa-paper-plane"></i>
                 Send Broadcast
             </div>
-
+            
             <form id="broadcastForm">
                 <div class="form-group">
-                    <label class="form-label">Message Text (Markdown Supported)</label>
+                    <label class="form-label">Message Text</label>
                     <textarea 
                         id="messageText" 
                         class="form-textarea" 
-                        placeholder="Enter your message here... Use **bold** for bold text"
+                        placeholder="Enter your message here..."
                         required
                     ></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="parseMode">Message Formatting</label>
+                    <select id="parseMode" class="form-select">
+                        <option value="HTML">HTML (e.g., &lt;b&gt;bold&lt;/b&gt;)</option>
+                        <option value="MarkdownV2">MarkdownV2 (e.g., **bold**)</option>
+                        <option value="None" selected>None (Send as plain text)</option>
+                    </select>
                     <div class="markdown-hint">
-                        Use <code>**bold**</code> <code>*italic*</code> <code>`code`</code> <code>[link](url)</code>
+                        Select <code>HTML</code> or <code>MarkdownV2</code> to format your text.
                     </div>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Button Text (Optional)</label>
-                    <input 
-                        type="text" 
-                        id="buttonText" 
-                        class="form-input" 
-                        placeholder="e.g., Visit Website"
-                    >
+                    <label class="form-label">Inline Buttons (Optional)</label>
+                    <div id="buttonsContainer">
+                        </div>
+                    <button type="button" id="addBtn" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-plus"></i> Add Button
+                    </button>
                 </div>
-
-                <div class="form-group">
-                    <label class="form-label">Button URL (Optional)</label>
-                    <input 
-                        type="url" 
-                        id="buttonUrl" 
-                        class="form-input" 
-                        placeholder="https://example.com"
-                    >
-                    <div class="markdown-hint">
-                        Add https:// for web URLs or t.me/botname for Telegram links
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary" id="sendBtn">
+                <button type="submit" class="btn btn-primary" id="sendBtn" style="margin-top: 20px;">
                     <i class="fas fa-paper-plane"></i>
                     <span>Send to All Users</span>
                 </button>
             </form>
         </div>
 
-        <!-- Broadcast History -->
         <div class="broadcast-card">
             <div class="section-title">
                 <i class="fas fa-history"></i>
@@ -467,9 +602,9 @@
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Bottom Navigation -->
     <nav class="bottom-nav">
         <a href="admin.html" class="nav-btn">
             <i class="fas fa-house nav-icon"></i>
@@ -504,7 +639,7 @@
         tg.expand();
         tg.ready();
 
-        // Initialize Supabase (FIXED - using window.supabase)
+        // Initialize Supabase
         const { createClient } = window.supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -519,7 +654,7 @@
             alert.className = `alert alert-${type}`;
             
             const icon = type === 'success' ? 'check-circle' :
-                        type === 'error' ? 'exclamation-circle' : 'info-circle';
+                         type === 'error' ? 'exclamation-circle' : 'info-circle';
             
             alert.innerHTML = `
                 <i class="fas fa-${icon}"></i>
@@ -534,15 +669,15 @@
             }, 5000);
         }
 
-        // ===== UTILITY FUNCTIONS =====
-// ... (keep your showAlert function) ...
+        // --- No longer needed, as we are not escaping ---
+        // function escapeMarkdownV2(text) { ... }
 
-// MarkdownV2 escape function
-function escapeMarkdownV2(text) {
-    // This regex correctly targets all 17 special characters for MarkdownV2
-    return text.replace(/([_\*\[\]()~\`\>\#\+\-\=\|\{\}\.\!\\])/g, '\\$1');
-}
-
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // ===== CHECK ADMIN STATUS FROM USERS TABLE =====
         async function checkAdmin() {
@@ -551,40 +686,31 @@ function escapeMarkdownV2(text) {
                 setTimeout(() => window.location.href = 'admin.html', 2000);
                 return false;
             }
-
             try {
-                // Query users table to check role
                 const { data, error } = await supabaseClient
                     .from('users')
                     .select('role, banned')
                     .eq('telegram_id', currentUserId)
                     .single();
-
                 if (error) {
                     console.error('Supabase error:', error);
                     throw new Error(`Database query failed: ${error.message}`);
                 }
-
                 if (!data) {
                     showAlert('User not found in database', 'error');
                     setTimeout(() => window.location.href = 'admin.html', 2000);
                     return false;
                 }
-
-                // Check if user is banned
                 if (data.banned) {
                     showAlert('Your account is banned', 'error');
                     setTimeout(() => window.location.href = 'admin.html', 2000);
                     return false;
                 }
-
-                // Check if user role is admin
                 if (data.role !== 'admin') {
                     showAlert('Access denied: Admin privileges required', 'error');
                     setTimeout(() => window.location.href = 'admin.html', 2000);
                     return false;
                 }
-
                 return true;
             } catch (error) {
                 console.error('Admin check error:', error);
@@ -593,48 +719,105 @@ function escapeMarkdownV2(text) {
             }
         }
 
+        // ===== DYNAMIC BUTTON FUNCTIONS =====
+        let buttonCounter = 0;
+        function addButtonField() {
+            buttonCounter++;
+            const container = document.getElementById('buttonsContainer');
+            const newButtonRow = document.createElement('div');
+            newButtonRow.className = 'button-group-item';
+            
+            newButtonRow.innerHTML = `
+                <div class="button-group-item-header">
+                    <label class="form-label">Button ${buttonCounter}</label>
+                    <button type="button" class="btn-danger-outline btn-remove-button">
+                        <i class="fas fa-trash-alt"></i> Remove
+                    </button>
+                </div>
+                <div class="button-group-inputs">
+                    <input type="text" class="form-input button-text-input" placeholder="Button Text" required>
+                    <input type="url" class="form-input button-url-input" placeholder="https://example.com" required>
+                </div>
+            `;
+            
+            // Add event listener to the remove button
+            newButtonRow.querySelector('.btn-remove-button').addEventListener('click', function() {
+                newButtonRow.style.animation = 'slideIn 0.4s ease reverse';
+                setTimeout(() => {
+                    newButtonRow.remove();
+                    updateButtonLabels();
+                }, 400);
+            });
+            
+            container.appendChild(newButtonRow);
+        }
+
+        function updateButtonLabels() {
+            const buttons = document.querySelectorAll('.button-group-item');
+            buttonCounter = 0;
+            buttons.forEach((btn, index) => {
+                buttonCounter = index + 1;
+                btn.querySelector('.form-label').textContent = `Button ${buttonCounter}`;
+            });
+        }
+        
+        function getButtonsData() {
+            const buttonRows = [];
+            const buttonGroups = document.querySelectorAll('.button-group-item');
+            
+            buttonGroups.forEach(group => {
+                const text = group.querySelector('.button-text-input').value.trim();
+                const url = group.querySelector('.button-url-input').value.trim();
+                
+                if (text && url) {
+                    // Each button is added as an object in its own row array
+                    // e.g., [[{ text: 'Btn 1', url: '...' }], [{ text: 'Btn 2', url: '...' }]]
+                    buttonRows.push([{ text: text, url: url }]);
+                }
+            });
+            return buttonRows;
+        }
+
+
         // ===== SEND BROADCAST =====
-        async function sendBroadcast(messageText, buttonText, buttonUrl) {
+        async function sendBroadcast(messageText, parseMode, buttonRows, firstButtonText, firstButtonUrl) {
             const sendBtn = document.getElementById('sendBtn');
             sendBtn.disabled = true;
             sendBtn.innerHTML = '<span class="spinner-inline"></span> Sending...';
 
             try {
-                // 1. Get all non-banned users from users table
+                // 1. Get all non-banned users
                 const { data: users, error: usersError } = await supabaseClient
                     .from('users')
                     .select('telegram_id')
                     .eq('banned', false);
-
                 if (usersError) throw new Error(`Database error: ${usersError.message}`);
                 
                 if (!users || users.length === 0) {
                     throw new Error('No active users found in database');
                 }
 
-                // 2. Prepare message with button
+                // 2. Prepare message with buttons
                 let keyboard = null;
-                if (buttonText && buttonUrl) {
+                if (buttonRows.length > 0) {
                     keyboard = {
-                        inline_keyboard: [[
-                            { text: buttonText, url: buttonUrl }
-                        ]]
+                        inline_keyboard: buttonRows
                     };
                 }
 
                 // 3. Send to all users
                 let successCount = 0;
                 let failCount = 0;
-
-                const escapedMessage = escapeMarkdownV2(messageText);
-
+                
+                // *** REMOVED aNY ESCAPING. We send raw messageText ***
+                
                 for (const userItem of users) {
                     try {
                         const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
                         const payload = {
                             chat_id: userItem.telegram_id,
-                            text: escapedMessage,
-                            parse_mode: 'MarkdownV2',
+                            text: messageText, // Send the raw text
+                            ...(parseMode !== 'None' && { parse_mode: parseMode }), // Add parse_mode if not 'None'
                             ...(keyboard && { reply_markup: keyboard })
                         };
 
@@ -657,15 +840,19 @@ function escapeMarkdownV2(text) {
                     }
                 }
 
-                // 4. Save to messages table
+                // 4. Save to messages table (only the first button for history)
                 const { error: saveError } = await supabaseClient
                     .from('messages')
                     .insert({
                         admin_id: currentUserId,
                         message_text: messageText,
-                        button_text: buttonText || null,
-                        button_url: buttonUrl || null,
-                        sent_count: successCount
+                        button_text: firstButtonText || null, // Only save first button text
+                        button_url: firstButtonUrl || null,  // Only save first button URL
+                        sent_count: successCount,
+                        // NEW: Save the full button array as JSON
+                        // Note: You must have a column named 'buttons_json' of type 'jsonb' in your 'messages' table
+                        // If you don't have this, remove the line below.
+                        // buttons_json: keyboard ? keyboard.inline_keyboard : null 
                     });
 
                 if (saveError) {
@@ -678,9 +865,12 @@ function escapeMarkdownV2(text) {
                 
                 // Reset form
                 document.getElementById('broadcastForm').reset();
+                document.getElementById('buttonsContainer').innerHTML = ''; // Clear buttons
+                buttonCounter = 0;
                 
                 // Reload history
                 loadHistory();
+
             } catch (error) {
                 showAlert(`❌ Broadcast error: ${error.message}`, 'error');
                 console.error('Broadcast error:', error);
@@ -695,14 +885,16 @@ function escapeMarkdownV2(text) {
             const historyList = document.getElementById('historyList');
             
             try {
+                // Check if 'buttons_json' column exists to load full buttons, else fallback
+                // For this example, we'll stick to button_text and button_url
+                
                 const { data, error } = await supabaseClient
                     .from('messages')
-                    .select('*')
+                    .select('*') // Select all columns
                     .order('created_at', { ascending: false })
                     .limit(20);
 
                 if (error) throw error;
-
                 if (!data || data.length === 0) {
                     historyList.innerHTML = `
                         <div class="empty-state">
@@ -715,9 +907,31 @@ function escapeMarkdownV2(text) {
 
                 historyList.innerHTML = data.map(msg => {
                     const date = new Date(msg.created_at).toLocaleString();
-                    const truncatedMsg = msg.message_text.length > 100
-                        ? msg.message_text.substring(0, 100) + '...'
+                    const truncatedMsg = msg.message_text.length > 200
+                        ? msg.message_text.substring(0, 200) + '...'
                         : msg.message_text;
+                    
+                    let buttonsHtml = '';
+                    
+                    // --- NEW: Check for full button JSON first ---
+                    // This assumes you added a 'buttons_json' (jsonb) column
+                    if (msg.buttons_json && Array.isArray(msg.buttons_json)) {
+                         buttonsHtml = msg.buttons_json.map(row => 
+                            row.map(btn => `
+                                <a href="${escapeHtml(btn.url)}" target="_blank" class="history-button">
+                                    🔗 ${escapeHtml(btn.text)}
+                                </a>
+                            `).join('')
+                        ).join('');
+                    } 
+                    // --- Fallback to old single button ---
+                    else if (msg.button_text && msg.button_url) {
+                        buttonsHtml = `
+                            <a href="${escapeHtml(msg.button_url)}" target="_blank" class="history-button">
+                                🔗 ${escapeHtml(msg.button_text)}
+                            </a>
+                        `;
+                    }
                     
                     return `
                         <div class="history-item">
@@ -727,11 +941,9 @@ function escapeMarkdownV2(text) {
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
-                            ${msg.button_text && msg.button_url ? `
-                                <a href="${escapeHtml(msg.button_url)}" target="_blank" class="history-button">
-                                    🔗 ${escapeHtml(msg.button_text)}
-                                </a>
-                            ` : ''}
+                            
+                            ${buttonsHtml ? `<div class="history-button-wrapper">${buttonsHtml}</div>` : ''}
+                            
                             <div class="history-meta">
                                 <span><i class="fas fa-users"></i> ${msg.sent_count || 0} users</span>
                                 <span><i class="fas fa-clock"></i> ${date}</span>
@@ -756,15 +968,12 @@ function escapeMarkdownV2(text) {
             if (!confirm('Delete this broadcast from history?')) {
                 return;
             }
-
             try {
                 const { error } = await supabaseClient
                     .from('messages')
                     .delete()
                     .eq('id', id);
-
                 if (error) throw error;
-
                 showAlert('Broadcast deleted successfully', 'success');
                 loadHistory();
             } catch (error) {
@@ -773,50 +982,52 @@ function escapeMarkdownV2(text) {
             }
         }
 
-        // ===== ESCAPE HTML =====
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
 
-        // ===== FORM SUBMIT =====
-        document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const messageText = document.getElementById('messageText').value.trim();
-            const buttonText = document.getElementById('buttonText').value.trim();
-            const buttonUrl = document.getElementById('buttonUrl').value.trim();
+        // ===== EVENT LISTENERS =====
+        document.addEventListener('DOMContentLoaded', () => {
 
-            // Validation
-            if (!messageText) {
-                showAlert('Please enter a message', 'error');
-                return;
-            }
+            // Form Submit
+            document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const messageText = document.getElementById('messageText').value.trim();
+                const parseMode = document.getElementById('parseMode').value;
+                const buttonRows = getButtonsData();
+                
+                // Validation
+                if (!messageText) {
+                    showAlert('Please enter a message', 'error');
+                    return;
+                }
+                
+                // Get first button's data for DB saving (to match old schema)
+                const firstButton = buttonRows.length > 0 ? buttonRows[0][0] : { text: null, url: null };
 
-            if (buttonText && !buttonUrl) {
-                showAlert('Button URL is required when button text is provided', 'error');
-                return;
-            }
+                await sendBroadcast(
+                    messageText, 
+                    parseMode, 
+                    buttonRows, 
+                    firstButton.text, 
+                    firstButton.url
+                );
+            });
 
-            if (buttonUrl && !buttonText) {
-                showAlert('Button text is required when button URL is provided', 'error');
-                return;
-            }
+            // Add Button
+            document.getElementById('addBtn').addEventListener('click', addButtonField);
 
-            await sendBroadcast(messageText, buttonText || null, buttonUrl || null);
+
+            // ===== INITIALIZE =====
+            (async function init() {
+                const isAdmin = await checkAdmin();
+                if (isAdmin) {
+                    loadHistory();
+                }
+            })();
         });
-
-        // ===== INITIALIZE =====
-        (async function init() {
-            const isAdmin = await checkAdmin();
-            if (isAdmin) {                loadHistory();
-            }
-        })();
 
         // Make deleteBroadcast available globally
         window.deleteBroadcast = deleteBroadcast;
+
     </script>
 </body>
 </html>
-
