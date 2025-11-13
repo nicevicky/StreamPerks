@@ -517,7 +517,7 @@
             const alert = document.createElement('div');
             alert.className = `alert alert-${type}`;
             
-            const icon = type === 'success' ? 'check-circle' : 
+            const icon = type === 'success' ? 'check-circle' :
                         type === 'error' ? 'exclamation-circle' : 'info-circle';
             
             alert.innerHTML = `
@@ -533,6 +533,11 @@
             }, 5000);
         }
 
+        // MarkdownV2 escape function (fixes $ and other special chars)
+        function escapeMarkdownV2(text) {
+            return text.replace(/([_\*\[\]\(\)\~\`\>\#\+\-\=\|\{\}\.\!])/g, '\\$1');
+        }
+
         // ===== CHECK ADMIN STATUS =====
         async function checkAdmin() {
             if (!currentUserId) {
@@ -540,22 +545,18 @@
                 setTimeout(() => window.location.href = 'admin.html', 2000);
                 return false;
             }
-
             try {
                 const { data, error } = await supabase
                     .from('users')
                     .select('role')
                     .eq('telegram_id', currentUserId)
                     .single();
-
                 if (error) throw error;
-
                 if (data?.role !== 'admin') {
                     showAlert('Access denied: Admin only', 'error');
                     setTimeout(() => window.location.href = 'admin.html', 2000);
                     return false;
                 }
-
                 return true;
             } catch (error) {
                 showAlert(`Error checking admin: ${error.message}`, 'error');
@@ -575,9 +576,7 @@
                     .from('users')
                     .select('telegram_id')
                     .eq('banned', false);
-
                 if (usersError) throw new Error(`Database error: ${usersError.message}`);
-
                 if (!users || users.length === 0) {
                     throw new Error('No users found in database');
                 }
@@ -592,17 +591,19 @@
                     };
                 }
 
-                // 3. Send to all users
+                // 3. Send to all users (with MarkdownV2 + proper escaping)
                 let successCount = 0;
                 let failCount = 0;
+
+                const escapedMessage = escapeMarkdownV2(messageText); // Critical fix
 
                 for (const userItem of users) {
                     try {
                         const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
                         const payload = {
                             chat_id: userItem.telegram_id,
-                            text: messageText,
-                            parse_mode: 'Markdown',
+                            text: escapedMessage,
+                            parse_mode: 'MarkdownV2',  // Changed to MarkdownV2
                             ...(keyboard && { reply_markup: keyboard })
                         };
 
@@ -611,9 +612,8 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-
                         const result = await response.json();
-                        
+
                         if (result.ok) {
                             successCount++;
                         } else {
@@ -636,7 +636,6 @@
                         button_url: buttonUrl || null,
                         sent_count: successCount
                     });
-
                 if (saveError) {
                     console.error('Error saving to messages table:', saveError);
                     showAlert(`Warning: Message sent but not saved to history: ${saveError.message}`, 'error');
@@ -650,7 +649,6 @@
                 
                 // Reload history
                 loadHistory();
-
             } catch (error) {
                 showAlert(`❌ Error: ${error.message}`, 'error');
                 console.error('Broadcast error:', error);
@@ -670,9 +668,7 @@
                     .select('*')
                     .order('created_at', { ascending: false })
                     .limit(20);
-
                 if (error) throw error;
-
                 if (!data || data.length === 0) {
                     historyList.innerHTML = `
                         <div class="empty-state">
@@ -682,11 +678,10 @@
                     `;
                     return;
                 }
-
                 historyList.innerHTML = data.map(msg => {
                     const date = new Date(msg.created_at).toLocaleString();
-                    const truncatedMsg = msg.message_text.length > 100 
-                        ? msg.message_text.substring(0, 100) + '...' 
+                    const truncatedMsg = msg.message_text.length > 100
+                        ? msg.message_text.substring(0, 100) + '...'
                         : msg.message_text;
                     
                     return `
@@ -709,7 +704,6 @@
                         </div>
                     `;
                 }).join('');
-
             } catch (error) {
                 showAlert(`Error loading history: ${error.message}`, 'error');
                 historyList.innerHTML = `
@@ -726,15 +720,12 @@
             if (!confirm('Are you sure you want to delete this broadcast from history?')) {
                 return;
             }
-
             try {
                 const { error } = await supabase
                     .from('messages')
                     .delete()
                     .eq('id', id);
-
                 if (error) throw error;
-
                 showAlert('Broadcast deleted from history', 'success');
                 loadHistory();
             } catch (error) {
@@ -752,7 +743,6 @@
         // ===== FORM SUBMIT =====
         document.getElementById('broadcastForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
             const messageText = document.getElementById('messageText').value.trim();
             const buttonText = document.getElementById('buttonText').value.trim();
             const buttonUrl = document.getElementById('buttonUrl').value.trim();
@@ -762,18 +752,15 @@
                 showAlert('Please enter a message', 'error');
                 return;
             }
-
             if (buttonText && !buttonUrl) {
                 showAlert('Button URL is required when button text is provided', 'error');
                 return;
             }
-
             if (buttonUrl && !buttonText) {
                 showAlert('Button text is required when button URL is provided', 'error');
                 return;
             }
-
-            await sendBroadcast(messageText, buttonText, buttonUrl);
+            await sendBroadcast(messageText, buttonText || null, buttonUrl || null);
         });
 
         // ===== INITIALIZE =====
