@@ -534,14 +534,15 @@
             }, 5000);
         }
 
-        // MarkdownV2 escape function
-        function escapeMarkdownV2(text) {
-            return text.replace(/([_\*
-$$
+        // ===== UTILITY FUNCTIONS =====
+// ... (keep your showAlert function) ...
 
-$$
-$$$$\~\`\>\#\+\-\=\|\{\}\.\!\\])/g, '\\$1');
-        }
+// MarkdownV2 escape function
+function escapeMarkdownV2(text) {
+    // This regex correctly targets all 17 special characters for MarkdownV2
+    return text.replace(/([_\*\[\]()~\`\>\#\+\-\=\|\{\}\.\!\\])/g, '\\$1');
+}
+
 
         // ===== CHECK ADMIN STATUS FROM USERS TABLE =====
         async function checkAdmin() {
