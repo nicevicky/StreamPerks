@@ -1,8 +1,0 @@
-fastapi
-uvicorn
-python-telegram-bot
-supabase
-python-dotenv
-pydantic
-httpx
-APScheduler
