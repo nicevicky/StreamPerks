@@ -13,6 +13,7 @@ import asyncio
 # ========================
 # CONFIGURATION & LOGGING
 # ========================
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -58,10 +59,11 @@ async def startup_event():
 # ========================
 # PYDANTIC MODELS
 # ========================
+
 class UserJoinTask(BaseModel):
     user_id: int
     task_id: int
-    channel_id: str
+    channel_username: str  # CHANGED: Now expects username (e.g. "@mychannel")
 
 class UserRejoinTask(BaseModel):
     user_id: int
@@ -70,34 +72,39 @@ class UserRejoinTask(BaseModel):
 # ========================
 # HELPER FUNCTIONS
 # ========================
-def get_safe_telegram_url(channel_identifier: str) -> str:
+
+def get_safe_telegram_url(channel_username: str) -> str:
     """
     Generates a valid Telegram URL.
-    - If username (@channel), returns https://t.me/channel
-    - If numeric ID (-100xyz), returns a link to the Bot (Fixed logic)
+    Fixes 'BUTTON_TYPE_INVALID' by ensuring protocol is https.
     """
-    clean_id = str(channel_identifier).strip()
+    clean_name = str(channel_username).strip()
     
-    # If it looks like a numeric ID (private channel) or contains invalid characters
-    if clean_id.startswith("-") or clean_id.isdigit():
-        # FIXED: Use the fetched BOT_USERNAME
-        if BOT_USERNAME:
-            return f"https://t.me/{BOT_USERNAME}"
-        else:
-            # Fallback if startup fetch failed (prevents 400 error by linking to telegram main)
-            return "https://t.me/telegram" 
+    # If it is already a full URL, return it
+    if clean_name.startswith("http"):
+        return clean_name
     
-    # Standard username handling
-    username = clean_id.replace("@", "")
+    # Remove '@' if present to build the link
+    username = clean_name.replace("@", "")
+    
+    # Return valid https link
     return f"https://t.me/{username}"
 
-async def check_channel_membership(user_id: int, channel_id: str) -> bool:
-    """Check if user is member of channel using Telegram Bot API"""
+async def check_channel_membership(user_id: int, channel_username: str) -> bool:
+    """
+    Check if user is member of channel using Telegram Bot API.
+    Telegram API accepts '@username' in the 'chat_id' parameter.
+    """
     try:
+        # Ensure username has @ if it's not a numeric ID
+        chat_identifier = channel_username
+        if not chat_identifier.startswith("@") and not chat_identifier.startswith("-") and not chat_identifier.isdigit():
+             chat_identifier = f"@{chat_identifier}"
+
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{TELEGRAM_API}/getChatMember",
-                params={"chat_id": channel_id, "user_id": user_id}
+                params={"chat_id": chat_identifier, "user_id": user_id}
             )
             data = response.json()
             
@@ -106,9 +113,10 @@ async def check_channel_membership(user_id: int, channel_id: str) -> bool:
                 # Member, administrator, or creator = still in channel
                 return status in ["member", "administrator", "creator"]
             
-            # If bot is kicked or chat not found, assume user left or verify failed
-            logger.warning(f"Check membership failed: {data.get('description')}")
+            # If bot is kicked or chat not found
+            logger.warning(f"Check membership failed for {channel_username}: {data.get('description')}")
             return False
+
     except Exception as e:
         logger.error(f"Error checking membership: {e}")
         return False
@@ -123,7 +131,6 @@ async def send_telegram_message(user_id: int, text: str, inline_keyboard: Option
         }
         
         if inline_keyboard:
-            # Ensure the structure is strictly correct for Telegram
             payload["reply_markup"] = {
                 "inline_keyboard": inline_keyboard
             }
@@ -135,7 +142,7 @@ async def send_telegram_message(user_id: int, text: str, inline_keyboard: Option
             if data.get("ok"):
                 return data["result"]["message_id"]
             else:
-                logger.error(f"Telegram API Error: {data}")
+                logger.error(f"Telegram API Error (Send): {data}")
                 return None
     except Exception as e:
         logger.error(f"Error sending message: {e}")
@@ -155,9 +162,7 @@ async def delete_telegram_message(user_id: int, message_id: int):
 def deduct_user_balance(user_id: int, amount: float):
     """Deduct balance from user"""
     try:
-        # Get current balance
         user = supabase.table("users").select("balance").eq("telegram_id", user_id).single().execute()
-        
         if user.data:
             new_balance = max(0, float(user.data["balance"]) - amount)
             supabase.table("users").update({"balance": new_balance}).eq("telegram_id", user_id).execute()
@@ -172,7 +177,6 @@ def restore_user_balance(user_id: int, amount: float):
     """Restore balance to user"""
     try:
         user = supabase.table("users").select("balance").eq("telegram_id", user_id).single().execute()
-        
         if user.data:
             new_balance = float(user.data["balance"]) + amount
             supabase.table("users").update({"balance": new_balance}).eq("telegram_id", user_id).execute()
@@ -191,6 +195,7 @@ async def schedule_message_deletion(user_id: int, message_id: int):
 # ========================
 # API ENDPOINTS
 # ========================
+
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "Telegram Task Verification API is running", "bot_user": BOT_USERNAME}
@@ -198,21 +203,22 @@ def read_root():
 @app.post("/api/user-joined-task")
 async def user_joined_task(data: UserJoinTask):
     """
-    Called when user joins a channel task
-    Saves user_id, task_id, channel_id, and joined_at timestamp
+    Called when user joins a channel task.
+    Now stores channel_username.
     """
     try:
-        # Verify task exists and get reward
+        # Verify task exists
         task = supabase.table("tasks").select("*").eq("id", data.task_id).single().execute()
         
         if not task.data:
             raise HTTPException(status_code=404, detail="Task not found")
         
         # Insert or update user_task record
+        # UPDATED: using channel_username
         user_task_data = {
             "user_id": data.user_id,
             "task_id": data.task_id,
-            "channel_id": data.channel_id,
+            "channel_username": data.channel_username, 
             "status": "completed",
             "joined_at": datetime.utcnow().isoformat(),
             "completed_at": datetime.utcnow().isoformat()
@@ -220,7 +226,7 @@ async def user_joined_task(data: UserJoinTask):
         
         supabase.table("user_tasks").upsert(user_task_data).execute()
         
-        logger.info(f"User {data.user_id} joined task {data.task_id} (channel: {data.channel_id})")
+        logger.info(f"User {data.user_id} joined task {data.task_id} (channel: {data.channel_username})")
         
         return {"success": True, "message": "Task join recorded"}
     
@@ -234,11 +240,11 @@ async def check_user_left(background_tasks: BackgroundTasks):
     Cron job endpoint: Check if users left channels before 7 days
     """
     try:
-        # Get all completed tasks that are within the 7-day window
         seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
         
+        # UPDATED QUERY: Fetch channel_username from the relation
         result = supabase.table("user_tasks")\
-            .select("*, tasks(reward)")\
+            .select("*, tasks(reward, channel_username)")\
             .eq("status", "completed")\
             .gte("joined_at", seven_days_ago)\
             .eq("penalty_applied", False)\
@@ -252,21 +258,26 @@ async def check_user_left(background_tasks: BackgroundTasks):
         for user_task in result.data:
             user_id = user_task["user_id"]
             task_id = user_task["task_id"]
-            channel_id = user_task["channel_id"]
+            
+            # Prefer username from Tasks table (Source of Truth), fallback to user_tasks if needed
+            channel_username = user_task["tasks"]["channel_username"] 
+            if not channel_username and "channel_username" in user_task:
+                 channel_username = user_task["channel_username"]
+
             reward = float(user_task["tasks"]["reward"])
             
-            # Check if user is still in channel
-            is_member = await check_channel_membership(user_id, channel_id)
+            # Check if user is still in channel using username
+            is_member = await check_channel_membership(user_id, channel_username)
             
             if not is_member:
                 # User left! Apply penalty
-                logger.warning(f"User {user_id} left channel {channel_id} before 7 days")
+                logger.warning(f"User {user_id} left channel {channel_username} before 7 days")
                 
                 # Deduct balance
                 deduct_user_balance(user_id, reward)
                 
-                # Generate Safe URL
-                safe_url = get_safe_telegram_url(channel_id)
+                # Generate Safe URL (Must be https://t.me/...)
+                safe_url = get_safe_telegram_url(channel_username)
                 
                 # Send warning message with rejoin button
                 text = (
@@ -276,6 +287,7 @@ async def check_user_left(background_tasks: BackgroundTasks):
                     f"Click below to rejoin and restore your task perks:"
                 )
                 
+                # This button caused the error previously. Now safe_url is guaranteed valid.
                 inline_keyboard = [[
                     {
                         "text": "🔁 Rejoin & Restore Task Perks",
@@ -318,7 +330,7 @@ async def user_rejoined_task(data: UserRejoinTask):
     try:
         # Get user_task record
         user_task = supabase.table("user_tasks")\
-            .select("*, tasks(reward)")\
+            .select("*, tasks(reward, channel_username)")\
             .eq("user_id", data.user_id)\
             .eq("task_id", data.task_id)\
             .single()\
@@ -327,11 +339,12 @@ async def user_rejoined_task(data: UserRejoinTask):
         if not user_task.data:
             raise HTTPException(status_code=404, detail="Task record not found")
         
-        channel_id = user_task.data["channel_id"]
+        # Get username from Source of Truth (Tasks table)
+        channel_username = user_task.data["tasks"]["channel_username"]
         reward = float(user_task.data["tasks"]["reward"])
         
         # Verify user actually rejoined
-        is_member = await check_channel_membership(data.user_id, channel_id)
+        is_member = await check_channel_membership(data.user_id, channel_username)
         
         if not is_member:
             return {"success": False, "message": "Please join the channel first"}
@@ -363,20 +376,6 @@ async def user_rejoined_task(data: UserRejoinTask):
     except Exception as e:
         logger.error(f"Error in user_rejoined_task: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-# ========================
-# BACKGROUND SCHEDULER (Optional)
-# ========================
-scheduler = BackgroundScheduler()
-
-def scheduled_check():
-    """Run check_user_left every 6 hours"""
-    # Note: In a real server context, ensure loops are handled correctly
-    import asyncio
-    asyncio.run(check_user_left(BackgroundTasks()))
-
-# scheduler.add_job(scheduled_check, 'interval', hours=6)
-# scheduler.start()
 
 # ========================
 # VERCEL HANDLER
