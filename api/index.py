@@ -10,6 +10,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import logging
 import asyncio
 
+# ========================
+# CONFIGURATION & LOGGING
+# ========================
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,10 +31,33 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Telegram API base URL
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
+# Global variable to store Bot Username
+BOT_USERNAME = None
+
+# ========================
+# STARTUP EVENT (FETCH USERNAME)
+# ========================
+@app.on_event("startup")
+async def startup_event():
+    """
+    Fetch the Bot's username on startup so we can create valid deep links.
+    """
+    global BOT_USERNAME
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{TELEGRAM_API}/getMe")
+            data = response.json()
+            if data.get("ok"):
+                BOT_USERNAME = data["result"]["username"]
+                logger.info(f"✅ Bot Username loaded: @{BOT_USERNAME}")
+            else:
+                logger.error(f"❌ Failed to fetch bot username: {data}")
+    except Exception as e:
+        logger.error(f"❌ Error fetching bot username: {e}")
+
 # ========================
 # PYDANTIC MODELS
 # ========================
-
 class UserJoinTask(BaseModel):
     user_id: int
     task_id: int
@@ -44,21 +70,22 @@ class UserRejoinTask(BaseModel):
 # ========================
 # HELPER FUNCTIONS
 # ========================
-
 def get_safe_telegram_url(channel_identifier: str) -> str:
     """
     Generates a valid Telegram URL.
     - If username (@channel), returns https://t.me/channel
-    - If numeric ID (-100xyz), returns a link to the Bot (since we can't guess private invite links)
+    - If numeric ID (-100xyz), returns a link to the Bot (Fixed logic)
     """
     clean_id = str(channel_identifier).strip()
     
     # If it looks like a numeric ID (private channel) or contains invalid characters
     if clean_id.startswith("-") or clean_id.isdigit():
-        # Fallback: Send them to the bot itself if we can't generate a deep link
-        # Alternatively, you could store the 'invite_link' in your tasks table and use that
-        bot_id = TELEGRAM_BOT_TOKEN.split(":")[0] if TELEGRAM_BOT_TOKEN else "telegram"
-        return f"https://t.me/bot{bot_id}" 
+        # FIXED: Use the fetched BOT_USERNAME
+        if BOT_USERNAME:
+            return f"https://t.me/{BOT_USERNAME}"
+        else:
+            # Fallback if startup fetch failed (prevents 400 error by linking to telegram main)
+            return "https://t.me/telegram" 
     
     # Standard username handling
     username = clean_id.replace("@", "")
@@ -164,10 +191,9 @@ async def schedule_message_deletion(user_id: int, message_id: int):
 # ========================
 # API ENDPOINTS
 # ========================
-
 @app.get("/")
 def read_root():
-    return {"status": "ok", "message": "Telegram Task Verification API is running"}
+    return {"status": "ok", "message": "Telegram Task Verification API is running", "bot_user": BOT_USERNAME}
 
 @app.post("/api/user-joined-task")
 async def user_joined_task(data: UserJoinTask):
@@ -241,7 +267,7 @@ async def check_user_left(background_tasks: BackgroundTasks):
                 
                 # Generate Safe URL
                 safe_url = get_safe_telegram_url(channel_id)
-
+                
                 # Send warning message with rejoin button
                 text = (
                     f"⚠️ <b>Warning: Early Exit Detected</b>\n\n"
@@ -341,7 +367,6 @@ async def user_rejoined_task(data: UserRejoinTask):
 # ========================
 # BACKGROUND SCHEDULER (Optional)
 # ========================
-
 scheduler = BackgroundScheduler()
 
 def scheduled_check():
@@ -356,5 +381,4 @@ def scheduled_check():
 # ========================
 # VERCEL HANDLER
 # ========================
-
 handler = app
