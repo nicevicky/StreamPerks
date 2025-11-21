@@ -8,6 +8,7 @@ from supabase import create_client, Client
 import httpx
 from apscheduler.schedulers.background import BackgroundScheduler
 import logging
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +45,25 @@ class UserRejoinTask(BaseModel):
 # HELPER FUNCTIONS
 # ========================
 
+def get_safe_telegram_url(channel_identifier: str) -> str:
+    """
+    Generates a valid Telegram URL.
+    - If username (@channel), returns https://t.me/channel
+    - If numeric ID (-100xyz), returns a link to the Bot (since we can't guess private invite links)
+    """
+    clean_id = str(channel_identifier).strip()
+    
+    # If it looks like a numeric ID (private channel) or contains invalid characters
+    if clean_id.startswith("-") or clean_id.isdigit():
+        # Fallback: Send them to the bot itself if we can't generate a deep link
+        # Alternatively, you could store the 'invite_link' in your tasks table and use that
+        bot_id = TELEGRAM_BOT_TOKEN.split(":")[0] if TELEGRAM_BOT_TOKEN else "telegram"
+        return f"https://t.me/bot{bot_id}" 
+    
+    # Standard username handling
+    username = clean_id.replace("@", "")
+    return f"https://t.me/{username}"
+
 async def check_channel_membership(user_id: int, channel_id: str) -> bool:
     """Check if user is member of channel using Telegram Bot API"""
     try:
@@ -58,6 +78,9 @@ async def check_channel_membership(user_id: int, channel_id: str) -> bool:
                 status = data["result"]["status"]
                 # Member, administrator, or creator = still in channel
                 return status in ["member", "administrator", "creator"]
+            
+            # If bot is kicked or chat not found, assume user left or verify failed
+            logger.warning(f"Check membership failed: {data.get('description')}")
             return False
     except Exception as e:
         logger.error(f"Error checking membership: {e}")
@@ -73,7 +96,10 @@ async def send_telegram_message(user_id: int, text: str, inline_keyboard: Option
         }
         
         if inline_keyboard:
-            payload["reply_markup"] = {"inline_keyboard": inline_keyboard}
+            # Ensure the structure is strictly correct for Telegram
+            payload["reply_markup"] = {
+                "inline_keyboard": inline_keyboard
+            }
         
         async with httpx.AsyncClient() as client:
             response = await client.post(f"{TELEGRAM_API}/sendMessage", json=payload)
@@ -81,7 +107,9 @@ async def send_telegram_message(user_id: int, text: str, inline_keyboard: Option
             
             if data.get("ok"):
                 return data["result"]["message_id"]
-            return None
+            else:
+                logger.error(f"Telegram API Error: {data}")
+                return None
     except Exception as e:
         logger.error(f"Error sending message: {e}")
         return None
@@ -128,6 +156,11 @@ def restore_user_balance(user_id: int, amount: float):
         logger.error(f"Error restoring balance: {e}")
         return False
 
+async def schedule_message_deletion(user_id: int, message_id: int):
+    """Background task to delete message after 24 hours"""
+    await asyncio.sleep(86400)  # 24 hours in seconds
+    await delete_telegram_message(user_id, message_id)
+
 # ========================
 # API ENDPOINTS
 # ========================
@@ -173,7 +206,6 @@ async def user_joined_task(data: UserJoinTask):
 async def check_user_left(background_tasks: BackgroundTasks):
     """
     Cron job endpoint: Check if users left channels before 7 days
-    Call this from Vercel Cron or external scheduler
     """
     try:
         # Get all completed tasks that are within the 7-day window
@@ -207,6 +239,9 @@ async def check_user_left(background_tasks: BackgroundTasks):
                 # Deduct balance
                 deduct_user_balance(user_id, reward)
                 
+                # Generate Safe URL
+                safe_url = get_safe_telegram_url(channel_id)
+
                 # Send warning message with rejoin button
                 text = (
                     f"⚠️ <b>Warning: Early Exit Detected</b>\n\n"
@@ -218,7 +253,7 @@ async def check_user_left(background_tasks: BackgroundTasks):
                 inline_keyboard = [[
                     {
                         "text": "🔁 Rejoin & Restore Task Perks",
-                        "url": f"https://t.me/{channel_id.replace('@', '')}"
+                        "url": safe_url
                     }
                 ]]
                 
@@ -303,12 +338,6 @@ async def user_rejoined_task(data: UserRejoinTask):
         logger.error(f"Error in user_rejoined_task: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def schedule_message_deletion(user_id: int, message_id: int):
-    """Background task to delete message after 24 hours"""
-    import asyncio
-    await asyncio.sleep(86400)  # 24 hours in seconds
-    await delete_telegram_message(user_id, message_id)
-
 # ========================
 # BACKGROUND SCHEDULER (Optional)
 # ========================
@@ -317,10 +346,10 @@ scheduler = BackgroundScheduler()
 
 def scheduled_check():
     """Run check_user_left every 6 hours"""
+    # Note: In a real server context, ensure loops are handled correctly
     import asyncio
     asyncio.run(check_user_left(BackgroundTasks()))
 
-# Uncomment to enable automatic checking every 6 hours
 # scheduler.add_job(scheduled_check, 'interval', hours=6)
 # scheduler.start()
 
@@ -328,5 +357,4 @@ def scheduled_check():
 # VERCEL HANDLER
 # ========================
 
-# Vercel requires this
 handler = app
